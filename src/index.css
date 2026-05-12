@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
@@ -7,12 +7,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Light theme background and text */
 body {
-  background-color: #F7F9FC;
-  color: #0A142F;
+  background-color: #ffffff;
+  color: #1a202c;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, #0033A0 0%, #6A3AC8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
 /* Hide scrollbar for marquee but allow scrolling if needed */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

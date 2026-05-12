@@ -1,35 +1,84 @@
-import React from 'react';
+import React from "react";
+import { motion } from "framer-motion";
+import { Github, Twitter, Mail, Zap } from "lucide-react";
+
 export function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-cardano-dark text-white pt-20 pb-10">
+    <footer className="bg-gradient-to-b from-[#0A1428] to-black text-white pt-20 pb-10 border-t border-purple-500/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16">
-          <div className="col-span-2">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-cardano-dark font-bold font-display text-lg">
-                ₳
+        {/* Main footer content */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-16">
+          {/* Brand Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="md:col-span-2"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <Zap className="w-6 h-6 text-white" />
               </div>
-              <span className="font-display font-bold text-xl tracking-tight">
-                Buy me an ₳DA
-              </span>
+              <div className="flex flex-col">
+                <span className="font-bold text-lg gradient-text">
+                  Support Ada
+                </span>
+                <span className="text-xs text-purple-400/70">
+                  Cardano Creators
+                </span>
+              </div>
             </div>
             <p className="text-gray-400 text-sm mb-6 max-w-xs leading-relaxed">
-              The easiest way for Cardano creators to accept support, build
-              memberships, and sell digital goods.
+              The non-custodial platform for Cardano creators to accept ADA
+              support, build memberships, and grow their community on-chain.
             </p>
-          </div>
+            <div className="flex gap-4">
+              <a
+                href="#"
+                className="w-10 h-10 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center hover:border-purple-500/60 transition-colors group"
+              >
+                <Twitter className="w-5 h-5 text-purple-400 group-hover:text-purple-300" />
+              </a>
+              <a
+                href="#"
+                className="w-10 h-10 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center hover:border-purple-500/60 transition-colors group"
+              >
+                <Github className="w-5 h-5 text-purple-400 group-hover:text-purple-300" />
+              </a>
+              <a
+                href="#"
+                className="w-10 h-10 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center hover:border-purple-500/60 transition-colors group"
+              >
+                <Mail className="w-5 h-5 text-purple-400 group-hover:text-purple-300" />
+              </a>
+            </div>
+          </motion.div>
 
-          <div>
-            <h4 className="font-bold mb-4 text-white">Product</h4>
+          {/* Product */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+          >
+            <h4 className="font-bold mb-6 text-white">Product</h4>
             <ul className="space-y-3 text-sm text-gray-400">
               <li>
-                <a href="#" className="hover:text-white transition-colors">
+                <a
+                  href="#features"
+                  className="hover:text-white transition-colors"
+                >
                   Features
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  Integrations
+                <a
+                  href="#how-it-works"
+                  className="hover:text-white transition-colors"
+                >
+                  How It Works
                 </a>
               </li>
               <li>
@@ -39,18 +88,24 @@ export function Footer() {
               </li>
               <li>
                 <a href="#" className="hover:text-white transition-colors">
-                  Changelog
+                  API Docs
                 </a>
               </li>
             </ul>
-          </div>
+          </motion.div>
 
-          <div>
-            <h4 className="font-bold mb-4 text-white">Resources</h4>
+          {/* Resources */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            <h4 className="font-bold mb-6 text-white">Resources</h4>
             <ul className="space-y-3 text-sm text-gray-400">
               <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  Help Center
+                <a href="#faq" className="hover:text-white transition-colors">
+                  FAQ
                 </a>
               </li>
               <li>
@@ -60,19 +115,25 @@ export function Footer() {
               </li>
               <li>
                 <a href="#" className="hover:text-white transition-colors">
-                  Creator Stories
+                  Creator Guide
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition-colors">
-                  Brand Assets
+                  Cardano Resources
                 </a>
               </li>
             </ul>
-          </div>
+          </motion.div>
 
-          <div>
-            <h4 className="font-bold mb-4 text-white">Company</h4>
+          {/* Company */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+          >
+            <h4 className="font-bold mb-6 text-white">Company</h4>
             <ul className="space-y-3 text-sm text-gray-400">
               <li>
                 <a href="#" className="hover:text-white transition-colors">
@@ -95,27 +156,43 @@ export function Footer() {
                 </a>
               </li>
             </ul>
-          </div>
+          </motion.div>
         </div>
 
-        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Bottom bar */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="border-t border-purple-500/20 pt-8 flex flex-col md:flex-row items-center justify-between gap-4"
+        >
           <p className="text-sm text-gray-500">
-            © {new Date().getFullYear()} Buy me an ADA. Built for the Cardano
-            ecosystem.
+            © {currentYear} Support Ada. Built for the Cardano ecosystem. 100%
+            non-custodial, on-chain verified.
           </p>
-          <div className="flex items-center gap-4 text-gray-400">
-            <a href="#" className="hover:text-white transition-colors">
-              Twitter
+          <div className="flex items-center gap-6 text-gray-400 text-sm">
+            <a
+              href="https://cardano.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              Cardano.org
+            </a>
+            <a
+              href="https://docs.cardano.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              Docs
             </a>
             <a href="#" className="hover:text-white transition-colors">
-              Discord
-            </a>
-            <a href="#" className="hover:text-white transition-colors">
-              GitHub
+              Status
             </a>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </footer>);
-
+    </footer>
+  );
 }
