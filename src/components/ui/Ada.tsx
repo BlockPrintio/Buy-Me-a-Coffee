@@ -29,9 +29,9 @@ export function Ada({ className = "" }: { className?: string }) {
       className={`inline-block h-[0.72em] w-[0.56em] shrink-0 align-[-0.035em] ${className}`}
     >
       {/* The two legs, drawn as one filled chevron. */}
-      <path d="M39 6 L74 96 H57 L39 47 L21 96 H4 Z" />
+      <path d="M39 4 L77 96 H55 L39 50 L23 96 H1 Z" />
       {/* The bar, at the weight of the legs so the mark reads as one piece. */}
-      <path d="M18 56 H60 V72 H18 Z" />
+      <path d="M15 57 H63 V77 H15 Z" />
     </svg>
   );
 }
