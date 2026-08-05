@@ -2,6 +2,7 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { Ada } from "./ui/Ada";
 import { walletLabel } from "./wallet/WalletPicker";
 import { scrollToSection, truncateMiddle } from "../lib/utils";
 
@@ -37,8 +38,8 @@ export function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 bg-white transition-all duration-300 ease-out-expo ${
-        scrolled ? "border-b border-ink-200" : "border-b border-transparent"
+      className={`sticky top-0 z-50 bg-ink-950 transition-shadow duration-200 ease-press ${
+        scrolled ? "shadow-plate-sm" : ""
       }`}
     >
       <div className="container-page">
@@ -47,13 +48,13 @@ export function Navbar() {
           <a
             href="#top"
             onClick={(event) => goTo(event, "#top")}
-            className="group flex min-w-0 items-center gap-2.5"
+            className="group flex min-w-0 items-center gap-2.5 text-ink-50"
           >
-            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white transition-transform duration-300 ease-out-expo group-hover:-rotate-6">
-              ₳
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center bg-brand-500 text-xl text-ink-50 transition-transform duration-200 ease-press group-hover:-rotate-6">
+              <Ada />
             </span>
-            <span className="truncate font-display text-lg font-bold tracking-tight text-ink-900">
-              Support<span className="text-brand-700">Ada</span>
+            <span className="truncate font-display text-xl uppercase tracking-[0.02em] text-ink-50">
+              Support<span className="text-brand-300">·</span>Ada
             </span>
           </a>
 
@@ -64,7 +65,7 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 onClick={(event) => goTo(event, item.href)}
-                className="rounded-lg px-3.5 py-2 text-sm font-semibold text-ink-500 transition-colors duration-200 hover:bg-ink-100 hover:text-ink-900"
+                className="px-3.5 py-2 text-xs font-800 uppercase tracking-[0.1em] text-ink-200 transition-colors duration-150 hover:bg-brand-500 hover:text-ink-50"
               >
                 {item.label}
               </a>
@@ -79,8 +80,8 @@ export function Navbar() {
               aria-haspopup="dialog"
               className={
                 walletChip
-                  ? "btn btn-sm border border-ink-300 bg-white text-ink-800 hover:border-ink-400 hover:bg-ink-50"
-                  : "rounded-lg px-4 py-2.5 text-sm font-semibold text-ink-600 transition-colors hover:text-brand-700"
+                  ? "btn btn-sm border-ink-50 bg-transparent text-ink-50 hover:bg-ink-50 hover:text-ink-950"
+                  : "px-4 py-2.5 text-xs font-800 uppercase tracking-[0.1em] text-ink-200 transition-colors hover:text-brand-400"
               }
             >
               {walletChip ? (
@@ -91,7 +92,7 @@ export function Navbar() {
                   />
                   <span className="tabular">{walletChip}</span>
                   <span className="sr-only">
-                    {walletLabel(wallet.id)} connected — open wallet details
+                    {walletLabel(wallet.id)} connected. Open wallet details
                   </span>
                 </>
               ) : (
@@ -104,6 +105,7 @@ export function Navbar() {
               aria-haspopup="dialog"
               className="btn-primary btn-sm"
             >
+              {" "}
               {page ? "My page" : "Start my page"}
             </button>
           </div>
@@ -114,7 +116,7 @@ export function Navbar() {
             onClick={() => setIsOpen((v) => !v)}
             aria-label={isOpen ? "Close menu" : "Open menu"}
             aria-expanded={isOpen}
-            className="rounded-lg p-2 text-ink-800 transition-colors hover:bg-ink-100 lg:hidden"
+            className="border-3 border-ink-50 p-1.5 text-ink-50 transition-colors hover:bg-brand-500 lg:hidden"
           >
             {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -130,7 +132,7 @@ export function Navbar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden border-t border-ink-200 bg-white lg:hidden"
+            className="overflow-hidden border-t-3 border-ink-50 bg-ink-950 lg:hidden"
           >
             <div className="container-page space-y-1 py-4">
               {NAV_LINKS.map((item) => (
@@ -138,7 +140,7 @@ export function Navbar() {
                   key={item.href}
                   href={item.href}
                   onClick={(event) => goTo(event, item.href)}
-                  className="block rounded-lg px-3 py-3 font-semibold text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900"
+                  className="block border-b-3 border-ink-800 px-3 py-3 text-sm font-800 uppercase tracking-[0.1em] text-ink-200 transition-colors hover:bg-brand-500 hover:text-ink-50"
                 >
                   {item.label}
                 </a>
@@ -150,8 +152,9 @@ export function Navbar() {
                     setIsOpen(false);
                     openModal({ kind: "wallet" });
                   }}
-                  className="btn-secondary w-full"
+                  className="btn btn-sm w-full border-ink-50 bg-transparent text-ink-50 hover:bg-ink-50 hover:text-ink-950"
                 >
+                  {" "}
                   {walletChip ? `Wallet · ${walletChip}` : "Log in"}
                 </button>
                 <button
@@ -160,8 +163,9 @@ export function Navbar() {
                     setIsOpen(false);
                     openModal({ kind: "start-page" });
                   }}
-                  className="btn-primary w-full"
+                  className="btn-primary btn-sm w-full border-ink-50 shadow-none"
                 >
+                  {" "}
                   {page ? "My page" : "Start my page"}
                 </button>
               </div>

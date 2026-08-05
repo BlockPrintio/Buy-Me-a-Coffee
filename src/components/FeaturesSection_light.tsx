@@ -1,5 +1,3 @@
-import React from "react";
-import { motion } from "framer-motion";
 import { Bell, Shield, TrendingUp, Users, Wallet, Zap } from "lucide-react";
 
 const FEATURES = [
@@ -7,7 +5,7 @@ const FEATURES = [
     icon: Zap,
     title: "Instant payouts",
     description:
-      "Support settles to your wallet in seconds — no payout schedule, no holds, no minimum threshold before you can touch your own money.",
+      "Support settles to your wallet in seconds: no payout schedule, no holds, no minimum threshold before you can touch your own money.",
   },
   {
     icon: Wallet,
@@ -19,7 +17,7 @@ const FEATURES = [
     icon: Shield,
     title: "On-chain receipts",
     description:
-      "Supporters can mint an NFT receipt — permanent, verifiable proof that they backed you early.",
+      "Supporters can mint an NFT receipt: permanent, verifiable proof that they backed you early.",
   },
   {
     icon: Users,
@@ -43,49 +41,39 @@ const FEATURES = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="section bg-ink-50">
+    <section id="features" className="section bg-ink-100">
       <div className="container-page">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6 }}
-          className="max-w-2xl"
-        >
+        <div className="max-w-2xl">
           <h2 className="heading-lg">Built for creators, not for businesses</h2>
           <p className="lead mt-4">
-            Everything you need to fund creative work on Cardano — and nothing
+            Everything you need to fund creative work on Cardano, and nothing
             you don't.
           </p>
-        </motion.div>
+        </div>
 
         {/* A divided list, not a rack of identical cards */}
-        <div className="mt-14 border-t border-ink-200">
+        <div className="mt-14 border-t-3 border-ink-950">
           <div className="grid md:grid-cols-2 md:gap-x-14">
-            {FEATURES.map((feature, i) => {
+            {FEATURES.map((feature) => {
               const Icon = feature.icon;
               return (
-                <motion.div
+                <div
                   key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.5, delay: (i % 2) * 0.08 }}
-                  className="flex gap-5 border-b border-ink-200 py-8"
+                  className="flex gap-5 border-b-3 border-ink-950 py-8"
                 >
                   <Icon
-                    className="mt-0.5 h-6 w-6 shrink-0 text-brand-700"
+                    className="mt-1 h-6 w-6 shrink-0 text-brand-500"
                     strokeWidth={1.8}
                   />
                   <div>
-                    <h3 className="font-display text-lg font-bold text-ink-900">
+                    <h3 className="font-display text-xl uppercase text-ink-950">
                       {feature.title}
                     </h3>
                     <p className="mt-2 leading-relaxed text-ink-500">
                       {feature.description}
                     </p>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
           </div>

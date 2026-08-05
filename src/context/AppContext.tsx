@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import CardanoWalletService, {
+  type WalletAPI,
   type WalletName,
 } from "../services/cardanoWallet";
 import { CREATORS, getCreator } from "../data/creators";
@@ -65,7 +66,6 @@ export type Modal =
   | { kind: "creators" }
   | { kind: "legal"; doc: "privacy" | "terms" }
   | null;
-
 export interface Toast {
   id: string;
   title: string;
@@ -80,6 +80,8 @@ interface AppContextValue {
   connectWallet: (id: WalletId) => Promise<boolean>;
   disconnectWallet: () => void;
   clearWalletError: () => void;
+  /** Raw CIP-30 handle for transaction building; null unless truly connected. */
+  getWalletApi: () => WalletAPI | null;
 
   modal: Modal;
   openModal: (modal: NonNullable<Modal>) => void;
@@ -131,7 +133,7 @@ function writeJson(key: string, value: unknown): void {
   }
 }
 
-/* The feed starts with a few supports so "Recent support" is never empty. */
+/* The feed starts with a few supports so "Recent support"is never empty. */
 const HOUR = 60 * 60 * 1000;
 const SEED_SUPPORTS: SupportEntry[] = [
   {
@@ -289,63 +291,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   /* --------------------------------------------------------- wallet verbs */
 
-  const connectWallet = useCallback(
-    async (id: WalletId): Promise<boolean> => {
-      setWallet((prev) => ({ ...prev, connecting: id, error: null }));
+  const connectWallet = useCallback(async (id: WalletId): Promise<boolean> => {
+    setWallet((prev) => ({ ...prev, connecting: id, error: null }));
 
-      if (id === "demo") {
-        // A local stand-in signer. Nothing is broadcast and no keys exist.
-        await new Promise((resolve) => window.setTimeout(resolve, 450));
-        setWallet({
-          id: "demo",
-          address: DEMO_ADDRESS,
-          balanceAda: 250,
-          networkId: 1,
-          connecting: null,
-          error: null,
-        });
-        writeJson(KEYS.wallet, "demo");
-        return true;
+    if (id === "demo") {
+      // A local stand-in signer. Nothing is broadcast and no keys exist.
+      await new Promise((resolve) => window.setTimeout(resolve, 450));
+      setWallet({
+        id: "demo",
+        address: DEMO_ADDRESS,
+        balanceAda: 250,
+        networkId: 1,
+        connecting: null,
+        error: null,
+      });
+      writeJson(KEYS.wallet, "demo");
+      return true;
+    }
+
+    try {
+      await serviceRef.current!.connect(id);
+      const [address, balanceAda, networkId] = await Promise.all([
+        serviceRef.current!.getAddress(),
+        serviceRef.current!.getBalanceInADA(),
+        serviceRef.current!.getNetworkId(),
+      ]);
+
+      if (!address) {
+        throw new Error(
+          "Connected, but the wallet returned no address. Check that it is unlocked.",
+        );
       }
 
-      try {
-        await serviceRef.current!.connect(id);
-        const [address, balanceAda, networkId] = await Promise.all([
-          serviceRef.current!.getAddress(),
-          serviceRef.current!.getBalanceInADA(),
-          serviceRef.current!.getNetworkId(),
-        ]);
-
-        if (!address) {
-          throw new Error(
-            "Connected, but the wallet returned no address. Check that it is unlocked.",
-          );
-        }
-
-        setWallet({
-          id,
-          address,
-          balanceAda,
-          networkId,
-          connecting: null,
-          error: null,
-        });
-        writeJson(KEYS.wallet, id);
-        return true;
-      } catch (error) {
-        setWallet((prev) => ({
-          ...prev,
-          connecting: null,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Could not connect to that wallet.",
-        }));
-        return false;
-      }
-    },
-    [],
-  );
+      setWallet({
+        id,
+        address,
+        balanceAda,
+        networkId,
+        connecting: null,
+        error: null,
+      });
+      writeJson(KEYS.wallet, id);
+      return true;
+    } catch (error) {
+      setWallet((prev) => ({
+        ...prev,
+        connecting: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not connect to that wallet.",
+      }));
+      return false;
+    }
+  }, []);
 
   const disconnectWallet = useCallback(() => {
     serviceRef.current!.disconnect();
@@ -367,7 +366,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openSupport = useCallback<AppContextValue["openSupport"]>(
     ({ creatorId, amount = 5, message, recurring = false, tierName }) => {
-      setModal({ kind: "support", creatorId, amount, message, recurring, tierName });
+      setModal({
+        kind: "support",
+        creatorId,
+        amount,
+        message,
+        recurring,
+        tierName,
+      });
     },
     [],
   );
@@ -376,7 +382,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const recordSupport = useCallback(
     (entry: Omit<SupportEntry, "id" | "ts">): SupportEntry => {
-      const full: SupportEntry = { ...entry, id: uid("support"), ts: Date.now() };
+      const full: SupportEntry = {
+        ...entry,
+        id: uid("support"),
+        ts: Date.now(),
+      };
       setSupports((prev) => {
         const next = [full, ...prev];
         writeJson(
@@ -412,19 +422,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   /* ----------------------------------------------------------------- page */
 
-  const savePage = useCallback(
-    (next: Omit<CreatorPage, "createdAt">) => {
-      const full: CreatorPage = { ...next, createdAt: Date.now() };
-      setPage(full);
-      writeJson(KEYS.page, full);
-    },
-    [],
-  );
+  const savePage = useCallback((next: Omit<CreatorPage, "createdAt">) => {
+    const full: CreatorPage = { ...next, createdAt: Date.now() };
+    setPage(full);
+    writeJson(KEYS.page, full);
+  }, []);
 
   const clearPage = useCallback(() => {
     setPage(null);
     localStorage.removeItem(KEYS.page);
   }, []);
+
+  const getWalletApi = useCallback(
+    () => serviceRef.current?.getApi() ?? null,
+    [],
+  );
 
   const value = useMemo<AppContextValue>(
     () => ({
@@ -434,6 +446,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       connectWallet,
       disconnectWallet,
       clearWalletError,
+      getWalletApi,
       modal,
       openModal,
       closeModal,
@@ -455,6 +468,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       connectWallet,
       disconnectWallet,
       clearWalletError,
+      getWalletApi,
       modal,
       openModal,
       closeModal,

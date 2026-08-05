@@ -1,4 +1,3 @@
-import React from "react";
 import { Navbar } from "../components/Navbar_light";
 import { Hero } from "../components/Hero_light";
 import { HowItWorks } from "../components/HowItWorks_light";

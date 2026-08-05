@@ -13,9 +13,19 @@ import {
 import { Modal } from "../ui/Modal";
 import { WalletPicker, walletLabel } from "../wallet/WalletPicker";
 import { useApp } from "../../context/AppContext";
-import { getCreator } from "../../data/creators";
-import { DEMO_CHECKOUT, SITE, feeBreakdown } from "../../config/site";
-import CardanoTransactionService from "../../services/cardanoTransaction";
+import { getCreator, isPayableAddress } from "../../data/creators";
+import { Ada } from "../ui/Ada";
+import {
+  DEMO_CHECKOUT,
+  PLATFORM_RATE,
+  SITE,
+  feeBreakdown,
+} from "../../config/site";
+import {
+  FEE_THRESHOLD_ADA,
+  MIN_SUPPORT_ADA,
+  explorerTxUrl,
+} from "../../config/chain";
 import {
   copyToClipboard,
   formatAda,
@@ -38,6 +48,7 @@ export function SupportModal() {
     recordSupport,
     toast,
     openSupport,
+    getWalletApi,
   } = useApp();
 
   const open = modal?.kind === "support";
@@ -51,6 +62,9 @@ export function SupportModal() {
   const [message, setMessage] = useState("");
   const [supporter, setSupporter] = useState("");
   const [txHash, setTxHash] = useState("");
+  const [sendError, setSendError] = useState("");
+  /** Memberships are prepaid, so the supporter chooses how far ahead to fund. */
+  const [periods, setPeriods] = useState(3);
   const [copied, setCopied] = useState(false);
 
   // Re-seed whenever a new support is opened, so the tier price or hero
@@ -62,12 +76,21 @@ export function SupportModal() {
     setCustom(PRESETS.includes(request.amount) ? "" : String(request.amount));
     setMessage(request.message ?? "");
     setTxHash("");
+    setSendError("");
+    setPeriods(3);
     setCopied(false);
-  }, [request?.creatorId, request?.amount, request?.tierName, request?.recurring]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    request?.creatorId,
+    request?.amount,
+    request?.tierName,
+    request?.recurring,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fees = useMemo(() => feeBreakdown(amount), [amount]);
   const insufficient =
     wallet.balanceAda !== null && amount > wallet.balanceAda && !recurring;
+  /** Caught here rather than at signing time, where it reads as a crash. */
+  const belowMinimum = amount > 0 && amount < MIN_SUPPORT_ADA;
 
   const title = recurring
     ? `Join ${request?.tierName ?? "membership"}`
@@ -80,13 +103,70 @@ export function SupportModal() {
 
   const handleSend = async () => {
     setStep("sending");
+    setSendError("");
 
-    // A real send builds and submits a CIP-30 transaction here. Without a
-    // serialization library and a chain provider there is nothing to sign,
-    // so the receipt below is generated locally and labelled as such.
-    await new Promise((resolve) => window.setTimeout(resolve, 1400));
+    // Three things force a simulated receipt: no chain configuration, a demo
+    // wallet with nothing to sign, or a creator whose payout address is one of
+    // the illustrative ones rather than a real bech32 address. In every case
+    // the receipt is generated locally and labelled as such.
+    const simulated =
+      DEMO_CHECKOUT ||
+      wallet.id === "demo" ||
+      !isPayableAddress(creator.walletAddress);
 
-    const hash = randomHex(64);
+    let hash: string;
+    if (simulated) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1400));
+      hash = randomHex(64);
+    } else {
+      const walletApi = getWalletApi();
+      if (!walletApi) {
+        setSendError(
+          "The wallet connection was lost. Reconnect and try again.",
+        );
+        setStep("review");
+        return;
+      }
+      try {
+        // ~2.6 MB of WebAssembly serialisation code lives behind these
+        // imports. Loading on demand keeps it off the landing page entirely.
+        if (recurring) {
+          // A membership locks every funded period at the script up front; the
+          // creator draws them down one at a time and the supporter can stop
+          // and reclaim whatever has not been earned.
+          const { startMembership } =
+            await import("../../services/membershipTx");
+          const result = await startMembership({
+            walletApi,
+            creatorAddress: creator.walletAddress,
+            amountPerPeriodAda: amount,
+            periods,
+            walletNetworkId: wallet.networkId,
+          });
+          hash = result.txHash;
+        } else {
+          const { sendSupport } = await import("../../services/supportTx");
+          const result = await sendSupport({
+            walletApi,
+            creatorAddress: creator.walletAddress,
+            creatorHandle: creator.handle,
+            amountAda: amount,
+            message: message.trim(),
+            walletNetworkId: wallet.networkId,
+          });
+          hash = result.txHash;
+        }
+      } catch (error) {
+        setSendError(
+          error instanceof Error
+            ? error.message
+            : "The transaction could not be submitted.",
+        );
+        setStep("review");
+        toast({ tone: "error", title: "Support not sent" });
+        return;
+      }
+    }
     setTxHash(hash);
     recordSupport({
       creatorId: creator.id,
@@ -96,7 +176,7 @@ export function SupportModal() {
       txHash: hash,
       recurring,
       tierName: request?.tierName,
-      demo: DEMO_CHECKOUT || wallet.id === "demo",
+      demo: simulated,
     });
     setStep("done");
     toast({
@@ -104,9 +184,9 @@ export function SupportModal() {
       title: recurring
         ? `${request?.tierName} membership started`
         : `₳${formatAdaSmart(amount)} sent to ${creator.name}`,
-      description: DEMO_CHECKOUT
-        ? "Demo checkout — no ADA left your wallet."
-        : undefined,
+      description: simulated
+        ? "Demo checkout. No ADA left your wallet."
+        : "Settled on-chain.",
     });
   };
 
@@ -130,18 +210,50 @@ export function SupportModal() {
         step === "done"
           ? undefined
           : recurring
-            ? `₳${formatAdaSmart(amount)} per month, renewed on-chain. Cancel anytime.`
+            ? `₳${formatAdaSmart(amount)} a month, funded up front and released one month at a time.`
             : creator.role
       }
     >
-      {/* ------------------------------------------------------- details */}
+      {" "}
+      {/* ------------------------------------------------------- details */}{" "}
       {step === "details" && (
         <div>
           <CreatorRow />
-
+          {recurring && (
+            <fieldset className="mt-6">
+              <legend className="text-sm font-800 text-ink-900">
+                Fund how many months up front?
+              </legend>
+              <p className="mt-1 text-sm text-ink-500">
+                A blockchain has no scheduler, so the months you fund are locked
+                now and released to {creator.name} one at a time. Cancel
+                whenever and the unearned balance comes back to you.
+              </p>
+              <div className="mt-3 grid grid-cols-4 gap-2.5">
+                {[1, 3, 6, 12].map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => setPeriods(count)}
+                    aria-pressed={periods === count}
+                    className={`tabular py-3 text-sm font-700 transition-all duration-200 ease-press ${
+                      periods === count
+                        ? "bg-brand-500 text-ink-50"
+                        : "border border-ink-300 bg-ink-50 text-ink-700 hover:border-brand-500 hover:text-brand-500"
+                    }`}
+                  >
+                    {count} mo
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-sm font-700 text-ink-900">
+                Locking <Ada />{formatAda(amount * periods)} now.
+              </p>
+            </fieldset>
+          )}
           {!recurring && (
             <fieldset className="mt-6">
-              <legend className="text-sm font-bold text-ink-900">
+              <legend className="text-sm font-800 text-ink-900">
                 Choose an amount
               </legend>
               <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-6">
@@ -153,13 +265,13 @@ export function SupportModal() {
                       type="button"
                       onClick={() => setPreset(preset)}
                       aria-pressed={active}
-                      className={`tabular rounded-xl py-3 text-sm font-semibold transition-all duration-200 ease-out-expo ${
+                      className={`tabular py-3 text-sm font-700 transition-all duration-200 ease-press ${
                         active
-                          ? "bg-brand-700 text-white"
-                          : "border border-ink-300 bg-white text-ink-700 hover:border-brand-500 hover:text-brand-700"
+                          ? "bg-brand-500 text-ink-50"
+                          : "border border-ink-300 bg-ink-50 text-ink-700 hover:border-brand-500 hover:text-brand-500"
                       }`}
                     >
-                      ₳{preset}
+                      <Ada />{preset}
                     </button>
                   );
                 })}
@@ -167,18 +279,18 @@ export function SupportModal() {
 
               <label
                 htmlFor="support-custom"
-                className="mt-3 block text-sm font-medium text-ink-500"
+                className="mt-3 block text-sm font-500 text-ink-500"
               >
                 Or enter your own
               </label>
               <div className="relative mt-2">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400">
-                  ₳
+                  <Ada />
                 </span>
                 <input
                   id="support-custom"
                   type="number"
-                  min={1}
+                  min={MIN_SUPPORT_ADA}
                   step={1}
                   inputMode="decimal"
                   value={custom}
@@ -186,7 +298,8 @@ export function SupportModal() {
                     const raw = event.target.value;
                     setCustom(raw);
                     const parsed = Number.parseFloat(raw);
-                    if (Number.isFinite(parsed) && parsed > 0) setAmount(parsed);
+                    if (Number.isFinite(parsed) && parsed > 0)
+                      setAmount(parsed);
                   }}
                   placeholder="Custom amount"
                   className="field pl-8"
@@ -194,20 +307,21 @@ export function SupportModal() {
               </div>
             </fieldset>
           )}
-
           <div className="mt-6 grid gap-4">
             <div>
               <label
                 htmlFor="support-name"
-                className="text-sm font-bold text-ink-900"
+                className="text-sm font-800 text-ink-900"
               >
                 Your name{" "}
-                <span className="font-medium text-ink-400">(optional)</span>
+                <span className="font-500 text-ink-400">(optional)</span>
               </label>
               <input
                 id="support-name"
                 value={supporter}
-                onChange={(event) => setSupporter(event.target.value.slice(0, 40))}
+                onChange={(event) =>
+                  setSupporter(event.target.value.slice(0, 40))
+                }
                 placeholder="Anonymous"
                 className="field mt-2"
               />
@@ -216,10 +330,10 @@ export function SupportModal() {
             <div>
               <label
                 htmlFor="support-note"
-                className="flex items-center justify-between text-sm font-bold text-ink-900"
+                className="flex items-center justify-between text-sm font-800 text-ink-900"
               >
                 Add a message
-                <span className="tabular text-xs font-medium text-ink-400">
+                <span className="tabular text-xs font-500 text-ink-400">
                   {message.length}/{MAX_MESSAGE}
                 </span>
               </label>
@@ -235,69 +349,71 @@ export function SupportModal() {
               />
             </div>
           </div>
-
           <FeeTable />
-
+          {belowMinimum && (
+            <p
+              role="alert"
+              className="mt-4 flex items-start gap-2  bg-accent-50 p-3 text-sm leading-relaxed text-accent-700"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              Cardano will not create an output smaller than its minimum-ada
+              deposit, so <Ada />{MIN_SUPPORT_ADA} is the smallest support that can
+              settle on-chain.
+            </p>
+          )}
           {insufficient && (
             <p
               role="alert"
-              className="mt-4 flex items-start gap-2 rounded-xl bg-accent-50 p-3 text-sm text-accent-700"
+              className="mt-4 flex items-start gap-2  bg-accent-50 p-3 text-sm text-accent-700"
             >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              That is more than your connected wallet holds (₳
+              That is more than your connected wallet holds (<Ada />
               {formatAda(wallet.balanceAda ?? 0)}). Lower the amount or top up
               first.
             </p>
           )}
-
           <button
             type="button"
             onClick={handleContinue}
-            disabled={amount <= 0 || insufficient}
+            disabled={amount <= 0 || belowMinimum || insufficient}
             className="btn-primary mt-6 w-full"
           >
             {recurring ? (
               <Repeat className="h-4 w-4" />
             ) : (
               <Coffee className="h-4 w-4" />
-            )}
-            Continue · ₳{formatAdaSmart(amount)}
-            {recurring ? "/mo" : ""}
+            )}{" "}
+            Continue · <Ada />{formatAdaSmart(amount)} {recurring ? "/mo" : ""}
           </button>
-
           <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink-400">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Non-custodial — funds never touch our wallet
-          </p>
+            <ShieldCheck className="h-3.5 w-3.5" /> Non-custodial: funds never
+            touch our wallet{" "}
+          </p>{" "}
         </div>
-      )}
-
-      {/* ------------------------------------------------------- connect */}
+      )}{" "}
+      {/* ------------------------------------------------------- connect */}{" "}
       {step === "connect" && (
         <div>
           <BackButton onClick={() => setStep("details")} />
           <p className="mb-5 text-sm leading-relaxed text-ink-500">
             Connect the wallet you want to pay from. Support goes straight from
-            it to {creator.name} — nothing is held in between.
+            it to {creator.name}, and nothing is held in between.
           </p>
           <WalletPicker onConnected={() => setStep("review")} />
         </div>
       )}
-
       {/* -------------------------------------------------------- review */}
       {step === "review" && (
         <div>
           <BackButton onClick={() => setStep("details")} />
           <CreatorRow />
 
-          <dl className="mt-6 space-y-3 rounded-2xl border border-ink-200 p-4 text-sm">
-            <Row label={recurring ? "Monthly" : "Amount"}>
-              ₳{formatAda(amount)}
+          <dl className="mt-6 space-y-3  border border-ink-200 p-4 text-sm">
+            <Row label={recurring ? "Per month" : "Amount"}>
+              <Ada />{formatAda(amount)}
             </Row>
             <Row label="Lovelace">
-              {CardanoTransactionService.adaToLovelace(amount).toLocaleString(
-                "en-US",
-              )}
+              {Math.round(amount * 1_000_000).toLocaleString("en-US")}
             </Row>
             <Row label="Paying from">
               {walletLabel(wallet.id)} ·{" "}
@@ -315,13 +431,25 @@ export function SupportModal() {
           <FeeTable />
 
           {DEMO_CHECKOUT && (
-            <p className="mt-4 flex items-start gap-2 rounded-xl bg-accent-50 p-3 text-sm leading-relaxed text-accent-700">
+            <p className="mt-4 flex items-start gap-2  bg-accent-50 p-3 text-sm leading-relaxed text-accent-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                <strong className="font-semibold">Demo checkout.</strong> This
-                build has no transaction backend, so confirming records the
-                support locally and no ADA leaves your wallet.
+                <strong className="font-700">Demo checkout.</strong> This build
+                has no transaction backend, so confirming records the support
+                locally and no ADA leaves your wallet.
               </span>
+            </p>
+          )}
+
+          {/* A failed submit drops back to this step, so the reason has to be
+              visible here — a toast that has already faded is not an answer. */}
+          {sendError && (
+            <p
+              role="alert"
+              className="mt-4 flex items-start gap-2  bg-rose-50 p-3 text-sm leading-relaxed text-rose-800"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {sendError}
             </p>
           )}
 
@@ -330,17 +458,18 @@ export function SupportModal() {
             onClick={handleSend}
             className="btn-primary mt-6 w-full"
           >
-            Confirm and send ₳{formatAdaSmart(amount)}
+            {" "}
+            {sendError ? "Try again · " : "Confirm and send "}<Ada />
+            {formatAdaSmart(amount)}
             {recurring ? "/mo" : ""}
           </button>
         </div>
       )}
-
       {/* ------------------------------------------------------- sending */}
       {step === "sending" && (
         <div className="flex flex-col items-center py-10 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-700" />
-          <p className="mt-5 font-display text-lg font-bold text-ink-900">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+          <p className="mt-5 font-display text-lg font-800 text-ink-900">
             Submitting to Cardano
           </p>
           <p className="mt-1.5 text-sm text-ink-500">
@@ -349,26 +478,25 @@ export function SupportModal() {
           </p>
         </div>
       )}
-
       {/* ---------------------------------------------------------- done */}
       {step === "done" && (
         <div className="text-center">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-positive-50 text-positive-500">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center  bg-positive-50 text-positive-500">
             <Check className="h-7 w-7" strokeWidth={3} />
           </span>
-          <h3 className="mt-5 font-display text-xl font-bold text-ink-900">
+          <h3 className="mt-5 font-display text-xl font-800 text-ink-900">
             {recurring
               ? `You're a ${request?.tierName} member`
               : `₳${formatAdaSmart(amount)} on its way to ${creator.name}`}
           </h3>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-500">
             {recurring
-              ? `${creator.name} will see you in the members list. Renews monthly until you cancel.`
-              : `${creator.name} receives ₳${formatAda(fees.creatorReceives)} after fees, and your message lands with it.`}
+              ? `${periods} month${periods === 1 ? "" : "s"} funded. ${creator.name} can claim one a month; cancel any time to reclaim the rest.`
+              : `${creator.name} receives ₳${formatAda(fees.creatorReceives)} in full, and your message lands with it.`}
           </p>
 
-          <div className="mt-6 rounded-2xl bg-ink-50 p-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
+          <div className="mt-6  bg-ink-50 p-4 text-left">
+            <p className="text-xs font-700 uppercase tracking-wide text-ink-400">
               Transaction hash
             </p>
             <div className="mt-2 flex items-center gap-2">
@@ -379,7 +507,7 @@ export function SupportModal() {
                 type="button"
                 onClick={handleCopyHash}
                 aria-label="Copy transaction hash"
-                className="shrink-0 rounded-lg border border-ink-300 bg-white p-2 text-ink-600 transition-colors hover:bg-ink-50"
+                className="shrink-0  border border-ink-300 bg-ink-50 p-2 text-ink-600 transition-colors hover:bg-ink-50"
               >
                 {copied ? (
                   <Check className="h-3.5 w-3.5 text-positive-500" />
@@ -390,18 +518,15 @@ export function SupportModal() {
             </div>
             {DEMO_CHECKOUT ? (
               <p className="mt-2.5 text-xs leading-relaxed text-ink-400">
-                Locally generated for the demo — it will not resolve on an
+                Locally generated for the demo, so it will not resolve on an
                 explorer.
               </p>
             ) : (
               <a
-                href={CardanoTransactionService.getTransactionUrl(
-                  txHash,
-                  wallet.networkId !== 0,
-                )}
+                href={explorerTxUrl(txHash)}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-800"
+                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-700 text-brand-500 hover:text-brand-600"
               >
                 View on Cardanoscan
                 <ExternalLink className="h-3 w-3" />
@@ -412,9 +537,7 @@ export function SupportModal() {
           <div className="mt-6 grid gap-2.5 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() =>
-                openSupport({ creatorId: creator.id, amount: 5 })
-              }
+              onClick={() => openSupport({ creatorId: creator.id, amount: 5 })}
               className="btn-secondary w-full"
             >
               Support again
@@ -434,14 +557,14 @@ export function SupportModal() {
 
   function CreatorRow() {
     return (
-      <div className="flex items-center gap-3.5 rounded-2xl bg-ink-50 p-4">
+      <div className="flex items-center gap-3.5  bg-ink-50 p-4">
         <span
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white ${creator.tint}`}
+          className={`flex h-12 w-12 shrink-0 items-center justify-center  text-base font-800 text-ink-50 ${creator.tint}`}
         >
           {creator.initials}
         </span>
         <div className="min-w-0">
-          <p className="truncate font-semibold text-ink-900">{creator.name}</p>
+          <p className="truncate font-700 text-ink-900">{creator.name}</p>
           <p className="truncate text-sm text-ink-500">
             {SITE.domain}/{creator.handle}
           </p>
@@ -451,21 +574,74 @@ export function SupportModal() {
   }
 
   function FeeTable() {
+    if (recurring) {
+      return (
+        <dl className="mt-5 space-y-2.5  bg-ink-50 p-4 text-sm">
+          <Row label="Per month" strong>
+            <Ada />{formatAda(amount)}
+          </Row>
+          <Row label="Months funded now">{periods}</Row>
+          <Row label="Network fee (paid to Cardano)">
+            +<Ada />{formatAda(fees.networkFee)}
+          </Row>
+          <div className="h-px bg-ink-200" />
+          <div className="flex items-center justify-between">
+            <dt className="font-700 text-ink-900">Locked at the contract</dt>
+            <dd className="tabular font-800 text-positive-500">
+              <Ada />{formatAda(amount * periods)}
+            </dd>
+          </div>
+          <p className="pt-1 text-xs leading-relaxed text-ink-400">
+            {creator.name} can draw one month at a time; the rest stays locked
+            and returns to you if you cancel. No platform fee on memberships.
+          </p>
+        </dl>
+      );
+    }
+
     return (
-      <dl className="mt-5 space-y-2.5 rounded-xl bg-ink-50 p-4 text-sm">
-        <Row label={recurring ? "Charged monthly" : "You send"} strong>
-          ₳{formatAda(amount)}
+      <dl className="mt-5 space-y-2.5  bg-ink-50 p-4 text-sm">
+        <Row label="You send" strong>
+          {" "}
+          <Ada />{formatAda(amount)}{" "}
+        </Row>{" "}
+        <Row
+          label={
+            fees.feeWaived ? (
+              <>
+                Platform fee (waived under <Ada />
+                {FEE_THRESHOLD_ADA})
+              </>
+            ) : (
+              `Platform fee (${(PLATFORM_RATE * 100).toFixed(1)}%)`
+            )
+          }
+        >
+          {fees.feeWaived ? (
+            <>
+              <Ada />
+              0.00
+            </>
+          ) : (
+            <>
+              +<Ada />
+              {formatAda(fees.platformFee)}
+            </>
+          )}
         </Row>
-        <Row label="Platform fee (2.5%)">−₳{formatAda(fees.platformFee)}</Row>
-        <Row label="Network fee">−₳{formatAda(fees.networkFee)}</Row>
+        <Row label="Network fee (paid to Cardano)">
+          +<Ada />{formatAda(fees.networkFee)}
+        </Row>
         <div className="h-px bg-ink-200" />
         <div className="flex items-center justify-between">
-          <dt className="font-semibold text-ink-900">
-            {creator.name} receives
-          </dt>
-          <dd className="tabular font-bold text-positive-500">
-            ₳{formatAda(fees.creatorReceives)}
+          <dt className="font-700 text-ink-900">{creator.name} receives</dt>
+          <dd className="tabular font-800 text-positive-500">
+            <Ada />{formatAda(fees.creatorReceives)}
           </dd>
+        </div>
+        <div className="flex items-center justify-between">
+          <dt className="text-ink-500">Total from your wallet</dt>
+          <dd className="tabular text-ink-700"><Ada />{formatAda(fees.totalPaid)}</dd>
         </div>
       </dl>
     );
@@ -477,7 +653,8 @@ function Row({
   strong,
   children,
 }: {
-  label: string;
+  /** A node, not a string: labels carry the drawn ADA mark. */
+  label: ReactNode;
   strong?: boolean;
   children: ReactNode;
 }) {
@@ -486,7 +663,7 @@ function Row({
       <dt className="shrink-0 text-ink-500">{label}</dt>
       <dd
         className={`tabular min-w-0 truncate text-right ${
-          strong ? "font-bold text-ink-900" : "text-ink-600"
+          strong ? "font-800 text-ink-900" : "text-ink-600"
         }`}
       >
         {children}
@@ -500,7 +677,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 transition-colors hover:text-ink-900"
+      className="mb-4 inline-flex items-center gap-1.5 text-sm font-700 text-ink-500 transition-colors hover:text-ink-900"
     >
       <ArrowLeft className="h-4 w-4" />
       Back

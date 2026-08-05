@@ -17,14 +17,14 @@ export interface WalletAPI {
   getChangeAddress: () => Promise<string>;
 }
 
-export type WalletName = 'nami' | 'eternl' | 'lace' | 'yoroi' | 'typhon';
+export type WalletName = "nami" | "eternl" | "lace" | "yoroi" | "typhon";
 
 const WALLET_NAMES: Record<WalletName, string> = {
-  nami: 'nami',
-  eternl: 'eternl',
-  lace: 'lace',
-  yoroi: 'yoroi',
-  typhon: 'typhon',
+  nami: "nami",
+  eternl: "eternl",
+  lace: "lace",
+  yoroi: "yoroi",
+  typhon: "typhon",
 };
 
 export class CardanoWalletService {
@@ -37,13 +37,12 @@ export class CardanoWalletService {
   static getAvailableWallets(): WalletName[] {
     const available: WalletName[] = [];
 
-    if (typeof window !== 'undefined' && window.cardano) {
-      Object.keys(WALLET_NAMES).forEach((name) => {
-        if (window.cardano[name as WalletName]) {
-          available.push(name as WalletName);
-        }
-      });
-    }
+    const cardano = getCardanoWindow();
+    Object.keys(WALLET_NAMES).forEach((name) => {
+      if (cardano[name]) {
+        available.push(name as WalletName);
+      }
+    });
 
     return available;
   }
@@ -53,18 +52,18 @@ export class CardanoWalletService {
    */
   async connect(walletName: WalletName): Promise<boolean> {
     try {
-      if (typeof window === 'undefined' || !window.cardano) {
-        throw new Error('Cardano wallets not available. Please install a wallet extension.');
-      }
+      const cardano = getCardanoWindow();
 
-      const walletInterface = window.cardano[walletName];
+      const walletInterface = cardano[walletName];
       if (!walletInterface) {
-        throw new Error(`${walletName} wallet not found. Please install it first.`);
+        throw new Error(
+          `${walletName} wallet not found. Please install it first.`,
+        );
       }
 
       const wallet = await walletInterface.enable();
       if (!wallet) {
-        throw new Error('Failed to enable wallet');
+        throw new Error("Failed to enable wallet");
       }
 
       this.wallet = wallet;
@@ -105,7 +104,7 @@ export class CardanoWalletService {
       const changeAddress = await this.wallet.getChangeAddress();
       return changeAddress || null;
     } catch (error) {
-      console.error('Error getting address:', error);
+      console.error("Error getting address:", error);
       return null;
     }
   }
@@ -120,7 +119,7 @@ export class CardanoWalletService {
       const balance = await this.wallet.getBalance();
       return balance;
     } catch (error) {
-      console.error('Error getting balance:', error);
+      console.error("Error getting balance:", error);
       return null;
     }
   }
@@ -144,7 +143,7 @@ export class CardanoWalletService {
     try {
       return await this.wallet.getNetworkId();
     } catch (error) {
-      console.error('Error getting network ID:', error);
+      console.error("Error getting network ID:", error);
       return null;
     }
   }
@@ -152,13 +151,15 @@ export class CardanoWalletService {
   /**
    * Sign data with wallet
    */
-  async signData(message: string): Promise<{ signature: string; key: string } | null> {
+  async signData(
+    message: string,
+  ): Promise<{ signature: string; key: string } | null> {
     if (!this.wallet) return null;
 
     try {
       return await this.wallet.signData(message);
     } catch (error) {
-      console.error('Error signing data:', error);
+      console.error("Error signing data:", error);
       return null;
     }
   }
@@ -177,21 +178,47 @@ export class CardanoWalletService {
   getWalletName(): WalletName | null {
     return this.walletName;
   }
+
+  /**
+   * The raw CIP-30 API of the enabled wallet.
+   *
+   * Transaction building needs the wallet object itself — to collect UTxOs,
+   * pick a change address and request a signature — rather than the read-only
+   * summaries the rest of this service exposes.
+   */
+  getApi(): WalletAPI | null {
+    return this.wallet;
+  }
 }
 
-// Declare global window interface for Cardano wallets
-declare global {
-  interface Window {
-    cardano?: {
-      [key in WalletName]?: {
-        enable: () => Promise<WalletAPI>;
-        isEnabled: () => Promise<boolean>;
-        /** CIP-30 wallets expose their own display name and icon (a data URI). */
-        name?: string;
-        icon?: string;
-      };
-    };
-  }
+/** A wallet extension as CIP-30 exposes it on `window.cardano`. */
+export interface WalletExtension {
+  enable: () => Promise<WalletAPI>;
+  isEnabled: () => Promise<boolean>;
+  /** CIP-30 wallets expose their own display name and icon (a data URI). */
+  name?: string;
+  icon?: string;
+}
+
+/**
+ * Read `window.cardano` without augmenting the global `Window` type.
+ *
+ * Transaction libraries declare their own, stricter `window.cardano`, and two
+ * conflicting global augmentations will not compile together. Keeping this
+ * local means the wallet layer stays independent of whichever library the
+ * checkout happens to use.
+ */
+export function getCardanoWindow(): Record<
+  string,
+  WalletExtension | undefined
+> {
+  if (typeof window === "undefined") return {};
+  const injected = (
+    window as unknown as {
+      cardano?: Record<string, WalletExtension | undefined>;
+    }
+  ).cardano;
+  return injected ?? {};
 }
 
 export default CardanoWalletService;

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Courier+Prime:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,37 +12,50 @@
   }
 
   body {
-    @apply bg-white font-sans text-ink-500 antialiased;
+    @apply bg-ink-50 font-sans text-ink-500 antialiased;
   }
 
+  /* Display lettering is set in caps and locked up tight. Anton has one
+     weight, so hierarchy comes from size and case, never from faux bold. */
   h1,
   h2,
-  h3,
-  h4 {
-    @apply font-display font-bold text-ink-900;
+  h3 {
+    @apply font-display font-normal uppercase text-ink-950;
     text-wrap: balance;
+  }
+
+  h4 {
+    @apply font-sans font-800 text-ink-900;
   }
 
   p {
     text-wrap: pretty;
   }
 
-  /* Sticky-header offset so anchor links don't land under the navbar */
   section[id],
   [id].scroll-anchor {
     scroll-margin-top: 6rem;
   }
 
   ::selection {
-    @apply bg-brand-100 text-brand-800;
+    @apply bg-brand-500 text-ink-50;
   }
 
+  /* A focus ring cut like a crop mark rather than a soft glow.
+   *
+   * Two rings, not one. A single brand-coloured ring vanished wherever the
+   * brand plate was the background, which is most of the hero. Pairing a press
+   * black outline with a paper ring inside the offset means one of the two
+   * always separates: the paper ring carries on dark fields, the black outline
+   * on the sheet. Both are 3px, so the indicator is never thinner than the
+   * rules around it. */
   a:focus-visible,
   button:focus-visible,
   input:focus-visible,
   textarea:focus-visible,
   summary:focus-visible {
-    @apply outline-none ring-2 ring-brand-500/60 ring-offset-2 ring-offset-white;
+    @apply outline outline-3 outline-offset-2 outline-ink-950;
+    box-shadow: 0 0 0 2px theme('colors.ink.50');
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -72,73 +85,171 @@
 
   /* ---------- Typography ---------- */
   .heading-xl {
-    @apply font-display text-4xl font-extrabold text-ink-900 sm:text-5xl lg:text-6xl;
+    @apply font-display text-5xl uppercase text-ink-950 sm:text-7xl lg:text-8xl;
   }
 
   .heading-lg {
-    @apply font-display text-3xl font-extrabold text-ink-900 sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1];
+    @apply font-display text-4xl uppercase text-ink-950 sm:text-5xl lg:text-6xl;
   }
 
   .lead {
-    @apply text-base leading-relaxed text-ink-500 sm:text-lg;
+    @apply max-w-[62ch] text-base leading-relaxed text-ink-500 sm:text-lg;
+  }
+
+  /* A running label set in the press's own voice: small, tracked, caps. */
+  .label {
+    @apply font-sans text-xs font-700 uppercase tracking-[0.18em] text-ink-400;
+  }
+
+  .docket {
+    @apply font-mono text-xs uppercase tracking-[0.08em];
   }
 
   /* ---------- Buttons ---------- */
+  /* Square, ruled, and printed. Pressing moves the sheet into its own
+     shadow rather than lifting it, which is what a stamp does. */
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-xl px-6 py-3.5
-           text-[0.95rem] font-semibold leading-none transition-all duration-200 ease-out-expo
-           active:translate-y-0 disabled:pointer-events-none disabled:opacity-60;
+    @apply relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap
+           border-3 border-ink-950 px-6 py-3.5 font-sans text-sm font-800 uppercase
+           tracking-[0.06em] leading-none transition-all duration-150 ease-press
+           disabled:pointer-events-none disabled:opacity-45;
   }
 
   .btn-primary {
-    @apply btn bg-brand-700 text-white shadow-brand hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-brand-lg;
+    @apply btn bg-brand-500 text-ink-50 shadow-plate-sm
+           hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none
+           active:translate-x-[4px] active:translate-y-[4px];
   }
 
-  /* Border only — pairing a hairline border with a wide soft shadow is the
-     generated-UI card signature. */
   .btn-secondary {
-    @apply btn border border-ink-300 bg-white text-ink-800 hover:-translate-y-0.5 hover:border-ink-400 hover:bg-ink-50;
+    @apply btn bg-ink-50 text-ink-950 shadow-plate-sm
+           hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none
+           active:translate-x-[4px] active:translate-y-[4px];
   }
 
   .btn-on-dark {
-    @apply btn bg-white text-brand-800 hover:-translate-y-0.5 hover:bg-brand-50;
+    @apply btn border-ink-50 bg-ink-50 text-ink-950 shadow-plate-paper
+           hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none
+           active:translate-x-[4px] active:translate-y-[4px];
+  }
+
+  .btn-ghost {
+    @apply btn border-transparent bg-transparent text-ink-700 hover:border-ink-950 hover:bg-ink-100;
   }
 
   .btn-sm {
-    @apply rounded-lg px-4 py-2.5 text-sm;
+    @apply border-3 px-4 py-2.5 text-xs;
   }
 
   .btn-lg {
-    @apply rounded-2xl px-7 py-4 text-base;
+    @apply px-8 py-5 text-base;
   }
 
   /* ---------- Surfaces ---------- */
-  /* Flat surfaces carry a border; lifted surfaces carry a shadow. Never both. */
+  /* Everything on this page is a printed block: ruled edge, flat fill. The
+     only "elevation" is a second plate struck out of register. */
   .panel {
-    @apply rounded-2xl border border-ink-200 bg-white;
+    @apply border-3 border-ink-950 bg-ink-50;
   }
 
   .card {
-    @apply rounded-2xl bg-white shadow-card;
+    @apply border-3 border-ink-950 bg-ink-50 shadow-plate;
+  }
+
+  .card-flat {
+    @apply border-3 border-ink-950 bg-ink-50;
   }
 
   .card-hover {
-    @apply card transition-all duration-300 ease-out-expo hover:-translate-y-1 hover:shadow-lift;
+    @apply card transition-transform duration-150 ease-press
+           hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-plate-sm;
   }
 
   .field {
-    @apply w-full rounded-xl border border-ink-300 bg-white px-4 py-3 text-ink-900 placeholder:text-ink-400
-           transition-colors duration-200 focus:border-brand-500 focus:outline-none
-           focus:ring-4 focus:ring-brand-500/10;
+    @apply w-full border-3 border-ink-950 bg-ink-50 px-4 py-3 font-sans text-ink-950
+           placeholder:text-ink-400 transition-colors duration-150
+           focus:border-brand-500 focus:outline-none;
   }
 
   .divider-fade {
-    @apply h-px w-full bg-ink-200;
+    @apply h-[3px] w-full bg-ink-950;
+  }
+
+  /* A hairline for inside blocks, where a 3px rule would shout. */
+  .rule {
+    @apply h-px w-full bg-ink-300;
+  }
+
+  /* ---------- Press marks ---------- */
+  /* The halftone screen. Sits behind content at low alpha so text stays
+     on the accessible side of the contrast floor. */
+  .screen {
+    @apply bg-halftone bg-screen opacity-[0.14];
+  }
+
+  .screen-red {
+    @apply bg-halftone-red bg-screen opacity-[0.22];
+  }
+
+  .screen-paper {
+    @apply bg-halftone-paper bg-screen opacity-[0.16];
+  }
+
+  /* A struck stamp — rotated, ruled, used for verification marks. */
+  .stamp {
+    @apply inline-flex items-center gap-1.5 border-3 border-brand-500 px-2 py-1
+           font-sans text-[0.625rem] font-800 uppercase tracking-[0.14em] text-brand-500;
+  }
+
+  /* Slab of solid ink that bleeds to the viewport edge. */
+  .bleed-left {
+    margin-left: calc(50% - 50vw);
+    padding-left: calc(50vw - 50%);
+  }
+
+  .bleed-right {
+    margin-right: calc(50% - 50vw);
+    padding-right: calc(50vw - 50%);
   }
 }
 
 @layer utilities {
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Anton renders slightly loose at poster sizes; pull it up. */
+  .lockup {
+    letter-spacing: -0.02em;
+    line-height: 0.88;
+  }
+
+  .font-800 {
+    font-weight: 800;
+  }
+
+  .font-700 {
+    font-weight: 700;
+  }
+
+  .font-500 {
+    font-weight: 500;
+  }
+
+  /* The diagonal the constructivists actually used: a hard cut, not a curve. */
+  .cut-down {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 3.5rem), 0 100%);
+  }
+
+  .cut-up {
+    clip-path: polygon(0 3.5rem, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .skew-plate {
+    transform: rotate(-1.4deg);
+  }
+
+  .skew-plate-reverse {
+    transform: rotate(1.1deg);
   }
 }

@@ -12,11 +12,11 @@ const DOCS = {
     intro:
       "Support Ada is non-custodial, which keeps the data footprint small by design.",
     points: [
-      "No account, email or password is required to support a creator — your wallet is the identity.",
+      "No account, email or password is required to support a creator; your wallet is the identity.",
       "We never receive or store your private keys, seed phrase or signing material.",
       "Wallet address, balance and network are read in the browser through CIP-30 and are not sent anywhere by this build.",
       "Your page details and support history in this build are stored in your own browser's local storage. Clearing site data removes them.",
-      "Transactions that settle on Cardano are public by nature — anyone can read amounts and addresses on-chain.",
+      "Transactions that settle on Cardano are public by nature: anyone can read amounts and addresses on-chain.",
     ],
   },
   terms: {
@@ -51,19 +51,19 @@ export function LegalModal() {
           <li key={point} className="flex gap-3 text-sm leading-relaxed">
             <span
               aria-hidden
-              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-700"
+              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500"
             />
             <span className="text-ink-500">{point}</span>
           </li>
         ))}
       </ul>
 
-      <p className="mt-6 rounded-xl bg-ink-50 p-4 text-sm leading-relaxed text-ink-500">
+      <p className="mt-6  bg-ink-50 p-4 text-sm leading-relaxed text-ink-500">
         This is a plain-language summary for a demo build, not a reviewed legal
         document. Questions?{" "}
         <a
           href={`mailto:${SITE.email}?subject=${encodeURIComponent(`${doc.title} question`)}`}
-          className="font-semibold text-brand-700 underline-offset-2 hover:underline"
+          className="font-700 text-brand-500 underline-offset-2 hover:underline"
         >
           {SITE.email}
         </a>

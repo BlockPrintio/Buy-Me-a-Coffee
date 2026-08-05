@@ -11,7 +11,7 @@ export interface CreatorProfile {
   walletAddress: string;
   avatar: string;
   coverImage: string;
-  category: 'developer' | 'artist' | 'spo' | 'educator' | 'other';
+  category: "developer" | "artist" | "spo" | "educator" | "other";
   socialLinks?: {
     twitter?: string;
     github?: string;
@@ -52,7 +52,12 @@ export class CreatorProfileService {
   /**
    * Create a new creator profile
    */
-  static createProfile(data: Omit<CreatorProfile, 'id' | 'createdAt' | 'totalEarned' | 'totalSupporters'>): CreatorProfile {
+  static createProfile(
+    data: Omit<
+      CreatorProfile,
+      "id" | "createdAt" | "totalEarned" | "totalSupporters"
+    >,
+  ): CreatorProfile {
     const profile: CreatorProfile = {
       ...data,
       id: `creator_${Date.now()}`,
@@ -92,7 +97,10 @@ export class CreatorProfileService {
   /**
    * Update creator profile
    */
-  static updateProfile(id: string, data: Partial<CreatorProfile>): CreatorProfile | null {
+  static updateProfile(
+    id: string,
+    data: Partial<CreatorProfile>,
+  ): CreatorProfile | null {
     const profile = this.profiles.get(id);
     if (!profile) return null;
 
@@ -104,7 +112,7 @@ export class CreatorProfileService {
   /**
    * Record a new support
    */
-  static recordSupport(support: Omit<Support, 'id'>): Support {
+  static recordSupport(support: Omit<Support, "id">): Support {
     const newSupport: Support = {
       ...support,
       id: `support_${Date.now()}`,
@@ -144,9 +152,12 @@ export class CreatorProfileService {
   /**
    * Create membership tier
    */
-  static createMembershipTier(creatorId: string, tier: Omit<MembershipTier, 'id'>): MembershipTier {
+  static createMembershipTier(
+    creatorId: string,
+    tier: Omit<MembershipTier, "id">,
+  ): MembershipTier {
     const profile = this.profiles.get(creatorId);
-    if (!profile) throw new Error('Creator not found');
+    if (!profile) throw new Error("Creator not found");
 
     const newTier: MembershipTier = {
       ...tier,
@@ -175,7 +186,8 @@ export class CreatorProfileService {
 
     const supports = this.getAllSupports(creatorId);
     const lastSupport = supports[0] || null;
-    const averageSupport = supports.length > 0 ? profile.totalEarned / supports.length : 0;
+    const averageSupport =
+      supports.length > 0 ? profile.totalEarned / supports.length : 0;
 
     return {
       totalEarned: profile.totalEarned,

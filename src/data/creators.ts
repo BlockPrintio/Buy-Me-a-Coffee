@@ -1,7 +1,16 @@
+import { CHAIN } from "../config/chain";
+
 /**
- * The demo creator directory. One source of truth for the support card, the
+ * The seeded creator directory. One source of truth for the support card, the
  * testimonials and the "Browse creators" list, so a support sent from any of
  * them lands on the same profile.
+ *
+ * The payout addresses are real, valid **preprod** addresses derived from the
+ * public test mnemonic documented in the README — so support sent to them on
+ * preprod genuinely settles, and the testnet ADA stays recoverable rather than
+ * being burned at an address nobody holds the key to. They are fixtures, not
+ * anyone's real wallet: point `CREATORS` at real addresses before running this
+ * on mainnet.
  */
 export interface Creator {
   id: string;
@@ -30,7 +39,7 @@ export const CREATORS: Creator[] = [
     bio: "Aiken and Plutus tutorials, open-source validators, and a weekly deep dive into Cardano tooling.",
     category: "developer",
     walletAddress:
-      "addr1qy2jt0qpqz2z2z9zx5w4v6t0q8s9k3n7m5c4x2v8b6n4m2q9w7e5r3t1y8u6i4o2p0a8s6d4f2g0h8j6k4l2z9x7c5v3b1n",
+      "addr_test1qryvgass5dsrf2kxl3vgfz76uhp83kv5lagzcp29tcana68ca5aqa6swlq6llfamln09tal7n5kvt4275ckwedpt4v7q48uhex",
     baseEarned: 250,
     baseSupporters: 42,
     verified: true,
@@ -45,7 +54,7 @@ export const CREATORS: Creator[] = [
     bio: "Independent audits for Cardano DeFi. Public reports, no retainers, funded entirely by the community.",
     category: "developer",
     walletAddress:
-      "addr1q9k3n7m5c4x2v8b6n4m2q9w7e5r3t1y8u6i4o2p0a8s6d4f2g0h8j6k4l2z9x7c5v3b1n2jt0qpqz2z2z9zx5w4v6t0q8s",
+      "addr_test1qpqy3lufef8c3en9nrnzp2svwy5vy9zangvp46dy4qw23clgfxhn3pqv243d6wptud7fuaj5tjqer7wc7m036gx0emsqaqa8te",
     baseEarned: 1840,
     baseSupporters: 318,
     verified: true,
@@ -60,7 +69,7 @@ export const CREATORS: Creator[] = [
     bio: "Hand-drawn generative collections, minted on Cardano. Members get first look at every drop.",
     category: "artist",
     walletAddress:
-      "addr1qv3b1n2jt0qpqz2z2z9zx5w4v6t0q8s9k3n7m5c4x2v8b6n4m2q9w7e5r3t1y8u6i4o2p0a8s6d4f2g0h8j6k4l2z9x7c5",
+      "addr_test1qr9xuxclxgx4gw3y4h4tcz4yvfmrt3e5nd3elphhf00a67xnrv5vjcv6tzehj2nnjj4cth4ndzyuf4asvvkgzeac2hfqk0za93",
     baseEarned: 920,
     baseSupporters: 92,
     verified: true,
@@ -75,7 +84,7 @@ export const CREATORS: Creator[] = [
     bio: "Plain-language explainers for people who are new to Cardano. Free forever, funded by supporters.",
     category: "educator",
     walletAddress:
-      "addr1q8s6d4f2g0h8j6k4l2z9x7c5v3b1n2jt0qpqz2z2z9zx5w4v6t0q8s9k3n7m5c4x2v8b6n4m2q9w7e5r3t1y8u6i4o2p0a",
+      "addr_test1qqra0q073cecs03hr724psh3ppejrlpjuphgpdj7xjwvkqnhqttgsr5xuaaq2g805dldu3gq9gw7gwmgdyhpwkm59ensgyph06",
     baseEarned: 610,
     baseSupporters: 128,
     verified: false,
@@ -90,7 +99,7 @@ export const CREATORS: Creator[] = [
     bio: "Single-operator pool running on renewable power, with monthly transparency reports for delegators.",
     category: "spo",
     walletAddress:
-      "addr1qr3t1y8u6i4o2p0a8s6d4f2g0h8j6k4l2z9x7c5v3b1n2jt0qpqz2z2z9zx5w4v6t0q8s9k3n7m5c4x2v8b6n4m2q9w7e5",
+      "addr_test1qp38kfvcm4c39yt8sfgkp3tyqe736fz708xzxuy5s9w9ev43yh3sash5eeq9ngrfuzxrekpvmly52xlmyfy8lz39emhs2spswl",
     baseEarned: 3120,
     baseSupporters: 204,
     verified: true,
@@ -105,7 +114,7 @@ export const CREATORS: Creator[] = [
     bio: "Long-form photo essays from West Africa, published open-access and paid for by readers.",
     category: "other",
     walletAddress:
-      "addr1qw7e5r3t1y8u6i4o2p0a8s6d4f2g0h8j6k4l2z9x7c5v3b1n2jt0qpqz2z2z9zx5w4v6t0q8s9k3n7m5c4x2v8b6n4m2q9",
+      "addr_test1qrrv7774puml0exvzc0uqrc8axezy6a925kv4ucdx906qy6mhjxtmx44x70ndr7g6dgqcdaf69q8fnrdmtvfud5x7rsqvsuqx5",
     baseEarned: 480,
     baseSupporters: 67,
     verified: false,
@@ -116,4 +125,32 @@ export const DEFAULT_CREATOR_ID = "luna-dev";
 
 export function getCreator(id: string): Creator {
   return CREATORS.find((c) => c.id === id) ?? CREATORS[0];
+}
+
+/**
+ * Whether an address can actually receive an on-chain payment on the network
+ * this build is configured for.
+ *
+ * The network half matters as much as the shape: a mainnet-configured site
+ * handed a preprod fixture address would otherwise get as far as building a
+ * transaction before failing deep inside the serialisation layer. Catching it
+ * here lets the checkout say so plainly and fall back to a demo receipt.
+ *
+ * This is a shape check, not a checksum — full validation happens in the
+ * transaction builder, which has the bech32 decoder.
+ */
+export function isPayableAddress(address: string): boolean {
+  const wantsTestnet = CHAIN.network !== "Mainnet";
+  const prefix = wantsTestnet ? "addr_test1" : "addr1";
+
+  if (!address.startsWith(prefix)) return false;
+  // Mainnet's `addr1` is a prefix of nothing else, but `addr_test1` addresses
+  // must not be accepted as mainnet ones.
+  if (!wantsTestnet && address.startsWith("addr_test1")) return false;
+  if (
+    !/^[023456789acdefghjklmnpqrstuvwxyz]+$/.test(address.slice(prefix.length))
+  ) {
+    return false;
+  }
+  return address.length - prefix.length >= 50;
 }

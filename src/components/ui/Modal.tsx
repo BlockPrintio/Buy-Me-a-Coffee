@@ -43,16 +43,13 @@ export function Modal({
       }
 
       if (event.key !== "Tab" || !panelRef.current) return;
-
       const items = Array.from(
         panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
       ).filter((el) => el.offsetParent !== null);
       if (items.length === 0) return;
-
       const first = items[0];
       const last = items[items.length - 1];
       const active = document.activeElement;
-
       if (event.shiftKey && (active === first || active === panelRef.current)) {
         event.preventDefault();
         last.focus();
@@ -63,14 +60,11 @@ export function Modal({
     },
     [onClose],
   );
-
   useEffect(() => {
     if (!open) return;
-
     restoreRef.current = document.activeElement as HTMLElement | null;
     const { overflow, paddingRight } = document.body.style;
     const scrollbar = window.innerWidth - document.documentElement.clientWidth;
-
     document.body.style.overflow = "hidden";
     if (scrollbar > 0) document.body.style.paddingRight = `${scrollbar}px`;
     document.addEventListener("keydown", onKeyDown, true);
@@ -104,7 +98,7 @@ export function Modal({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="absolute inset-0 bg-ink-950/50 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-ink-950/70"
           />
 
           <motion.div
@@ -118,20 +112,24 @@ export function Modal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
             transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-float outline-none sm:rounded-3xl ${
+            className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden border-3 border-ink-950 bg-ink-50 shadow-plate-lg outline-none ${
               size === "lg" ? "sm:max-w-3xl" : "sm:max-w-lg"
             }`}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-ink-200 px-6 py-5">
+            {/* The dialog is a docket: black header band, ruled body. */}
+            <div className="flex items-start justify-between gap-4 border-b-3 border-ink-950 bg-ink-950 px-5 py-4">
               <div className="min-w-0">
                 <h2
                   id={titleId}
-                  className="font-display text-lg font-bold text-ink-900"
+                  className="font-display text-xl uppercase leading-none text-ink-50"
                 >
                   {title}
                 </h2>
                 {description && (
-                  <p id={descriptionId} className="mt-1 text-sm text-ink-500">
+                  <p
+                    id={descriptionId}
+                    className="mt-1.5 text-sm leading-snug text-ink-200"
+                  >
                     {description}
                   </p>
                 )}
@@ -140,9 +138,9 @@ export function Modal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="-mr-1 -mt-1 shrink-0 rounded-lg p-2 text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-900"
+                className="-mr-0.5 shrink-0 border-3 border-ink-50 p-1 text-ink-50 transition-colors hover:bg-brand-500"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" strokeWidth={3} />
               </button>
             </div>
 

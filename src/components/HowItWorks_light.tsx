@@ -1,5 +1,5 @@
-import React from "react";
-import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
+import { useApp } from "../context/AppContext";
 
 const STEPS = [
   {
@@ -20,45 +20,57 @@ const STEPS = [
 ];
 
 export function HowItWorks() {
+  const { openModal } = useApp();
+
   return (
-    <section id="how-it-works" className="section bg-white">
+    <section id="how-it-works" className="section bg-ink-50">
       <div className="container-page">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6 }}
-          className="max-w-2xl"
-        >
+        <div className="max-w-2xl">
           <h2 className="heading-lg">Live in three steps</h2>
           <p className="lead mt-4">
             From zero to accepting on-chain support in less time than it takes
             to brew a coffee.
           </p>
-        </motion.div>
+        </div>
 
-        <div className="mt-14 grid gap-px overflow-hidden rounded-2xl bg-ink-200 sm:mt-16 md:grid-cols-3">
+        {/* Three ruled blocks. The numeral is the sequence, set at poster
+            scale so the order reads before the words do. */}
+        <ol className="mt-14 grid border-3 border-ink-950 sm:mt-16 md:grid-cols-3">
           {STEPS.map((step, i) => (
-            <motion.div
+            <li
               key={step.title}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.55, delay: i * 0.12 }}
-              className="bg-white p-7 lg:p-8"
+              className={`relative bg-ink-50 p-7 lg:p-8 ${
+                i < STEPS.length - 1
+                  ? "border-b-3 border-ink-950 md:border-b-0 md:border-r-3"
+                  : ""
+              }`}
             >
-              {/* The number is the sequence itself, so it carries its weight */}
-              <span className="tabular font-display text-sm font-bold text-brand-700">
-                Step {i + 1}
+              <span
+                aria-hidden
+                className="tabular block font-display text-6xl leading-none text-brand-500"
+              >
+                {String(i + 1).padStart(2, "0")}
               </span>
-              <h3 className="mt-3 font-display text-xl font-bold text-ink-900">
+              <h3 className="mt-4 font-display text-2xl uppercase text-ink-950">
                 {step.title}
               </h3>
               <p className="mt-2.5 leading-relaxed text-ink-500">
                 {step.description}
               </p>
-            </motion.div>
+            </li>
           ))}
+        </ol>
+
+        <div className="mt-10 flex">
+          <button
+            type="button"
+            onClick={() => openModal({ kind: "start-page" })}
+            aria-haspopup="dialog"
+            className="btn-primary group"
+          >
+            Claim your handle
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 ease-press group-hover:translate-x-1" />
+          </button>
         </div>
       </div>
     </section>

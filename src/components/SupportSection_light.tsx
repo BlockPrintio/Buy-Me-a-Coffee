@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Coffee, ShieldCheck } from "lucide-react";
+import { Ada } from "./ui/Ada";
 import { useApp } from "../context/AppContext";
 import { DEFAULT_CREATOR_ID, getCreator } from "../data/creators";
-import { feeBreakdown } from "../config/site";
+import { PLATFORM_RATE, feeBreakdown } from "../config/site";
+import { FEE_THRESHOLD_ADA, MIN_SUPPORT_ADA } from "../config/chain";
 import { formatAda, formatAdaSmart, initialsFrom, timeAgo } from "../lib/utils";
 
 const AMOUNTS = [3, 5, 10, 25, 50, 100];
@@ -27,65 +29,58 @@ export function SupportSection() {
   };
 
   return (
-    <section id="support" className="section bg-ink-50">
+    <section
+      id="support"
+      className="section relative overflow-hidden bg-ink-950"
+    >
+      <div
+        aria-hidden
+        className="screen-paper pointer-events-none absolute inset-0"
+      />
       <div className="container-page">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6 }}
-          className="max-w-2xl"
-        >
-          <h2 className="heading-lg">
+        <div className="max-w-2xl">
+          <h2 className="heading-lg text-ink-50">
             Give your audience an easy way to say thanks
           </h2>
-          <p className="lead mt-4">
+          <p className="lead mt-4 text-ink-200">
             A couple of taps sends ADA and a message. No sign-up wall, no card
             forms, no chargebacks.
           </p>
-        </motion.div>
+        </div>
 
         <div className="mx-auto mt-14 grid max-w-5xl gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
           {/* ---------- Support card ---------- */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.6 }}
-            className="card overflow-hidden"
-          >
+          <div className="card overflow-hidden">
             {/* Creator header band — solid brand blue, no cyan stop */}
-            <div className="h-24 bg-brand-700" />
-
+            <div className="h-20 border-b-3 border-ink-950 bg-brand-500" />
             {/* `relative` keeps this above the band */}
             <div className="relative px-6 pb-7 sm:px-8 sm:pb-8">
               {/* Avatar overlaps the band; the text sits safely below it */}
-              <span className="-mt-10 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl bg-white text-xl font-bold text-brand-700 ring-4 ring-white">
+              <span className="-mt-10 flex h-[4.5rem] w-[4.5rem] items-center justify-center border-3 border-ink-950 bg-ink-50 font-display text-2xl text-ink-950">
                 {creator.initials}
               </span>
-
               <div className="mt-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                 <div className="min-w-0">
-                  <h3 className="truncate font-display text-xl font-bold text-ink-900">
+                  <h3 className="truncate font-display text-2xl uppercase text-ink-950">
                     {creator.name}
                   </h3>
-                  <p className="truncate text-sm text-ink-500">{creator.role}</p>
+                  <p className="truncate text-sm text-ink-500">
+                    {creator.role}
+                  </p>
                 </div>
                 <div className="shrink-0 text-left sm:text-right">
-                  <div className="tabular font-display text-2xl font-bold text-ink-900">
-                    ₳{formatAda(stats.earned, 0)}
+                  <div className="tabular flex items-center justify-end gap-0.5 font-display text-3xl text-ink-950">
+                    <Ada />
+                    {formatAda(stats.earned, 0)}
                   </div>
                   <p className="tabular text-sm text-ink-500">
                     from {stats.supporters} supporters
                   </p>
                 </div>
               </div>
-
               {/* Amount selector */}
               <fieldset className="mt-8">
-                <legend className="text-sm font-bold text-ink-900">
-                  Choose an amount
-                </legend>
+                <legend className="label">Choose an amount</legend>
                 <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-6">
                   {AMOUNTS.map((amount) => {
                     const active = selectedAmount === amount && custom === "";
@@ -95,13 +90,13 @@ export function SupportSection() {
                         type="button"
                         onClick={() => pickAmount(amount)}
                         aria-pressed={active}
-                        className={`tabular rounded-xl py-3 text-sm font-semibold transition-all duration-200 ease-out-expo ${
+                        className={`tabular py-3 text-sm font-700 transition-all duration-200 ease-press ${
                           active
-                            ? "bg-brand-700 text-white"
-                            : "border border-ink-300 bg-white text-ink-700 hover:border-brand-500 hover:text-brand-700"
+                            ? "bg-brand-500 text-ink-50"
+                            : "border border-ink-300 bg-ink-50 text-ink-700 hover:border-brand-500 hover:text-brand-500"
                         }`}
                       >
-                        ₳{amount}
+                        <Ada />{amount}
                       </button>
                     );
                   })}
@@ -109,18 +104,18 @@ export function SupportSection() {
 
                 <label
                   htmlFor="support-custom-amount"
-                  className="mt-3 block text-sm font-medium text-ink-500"
+                  className="mt-3 block text-sm font-500 text-ink-500"
                 >
                   Or enter your own
                 </label>
                 <div className="relative mt-2">
                   <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400">
-                    ₳
+                    <Ada />
                   </span>
                   <input
                     id="support-custom-amount"
                     type="number"
-                    min={1}
+                    min={MIN_SUPPORT_ADA}
                     step={1}
                     inputMode="decimal"
                     value={custom}
@@ -137,15 +132,14 @@ export function SupportSection() {
                   />
                 </div>
               </fieldset>
-
               {/* Message */}
               <div className="mt-6">
                 <label
                   htmlFor="support-message"
-                  className="flex items-center justify-between text-sm font-bold text-ink-900"
+                  className="flex items-center justify-between text-sm font-800 text-ink-900"
                 >
                   Add a message
-                  <span className="tabular text-xs font-medium text-ink-400">
+                  <span className="tabular text-xs font-500 text-ink-400">
                     {message.length}/{MAX_MESSAGE}
                   </span>
                 </label>
@@ -160,7 +154,6 @@ export function SupportSection() {
                   className="field mt-3 resize-none"
                 />
               </div>
-
               <button
                 type="button"
                 onClick={() =>
@@ -175,63 +168,83 @@ export function SupportSection() {
                 className="btn-primary mt-6 w-full"
               >
                 <Coffee className="h-4 w-4" />
-                Send ₳{formatAdaSmart(selectedAmount)} to {creator.name}
+                Send <Ada />{formatAdaSmart(selectedAmount)} to {creator.name}
               </button>
-
-              {/* Fee breakdown */}
-              <dl className="mt-5 space-y-2.5 rounded-xl bg-ink-50 p-4 text-sm">
+              {/* Fee breakdown — fees are added on top of the support, which
+                  is how the transaction is actually built, so the creator's
+                  line is the amount chosen and nothing is subtracted from it. */}
+              <dl className="mt-5 space-y-2.5  bg-ink-50 p-4 text-sm">
                 <div className="flex items-center justify-between">
                   <dt className="text-ink-500">You send</dt>
-                  <dd className="tabular font-bold text-ink-900">
-                    ₳{formatAda(selectedAmount)}
+                  <dd className="tabular font-800 text-ink-900">
+                    <Ada />{formatAda(selectedAmount)}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-ink-500">Platform fee (2.5%)</dt>
-                  <dd className="tabular text-ink-600">
-                    −₳{formatAda(fees.platformFee)}
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-ink-500">
+                    {fees.feeWaived ? (
+                      <>
+                        Platform fee (waived under <Ada />
+                        {FEE_THRESHOLD_ADA})
+                      </>
+                    ) : (
+                      `Platform fee (${(PLATFORM_RATE * 100).toFixed(1)}%)`
+                    )}
+                  </dt>
+                  <dd className="tabular shrink-0 text-ink-600">
+                    {fees.feeWaived ? (
+                      <>
+                        <Ada />
+                        0.00
+                      </>
+                    ) : (
+                      <>
+                        +<Ada />
+                        {formatAda(fees.platformFee)}
+                      </>
+                    )}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-ink-500">Network fee</dt>
-                  <dd className="tabular text-ink-600">
-                    −₳{formatAda(fees.networkFee)}
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-ink-500">
+                    Network fee (paid to Cardano)
+                  </dt>
+                  <dd className="tabular shrink-0 text-ink-600">
+                    +<Ada />{formatAda(fees.networkFee)}
                   </dd>
                 </div>
                 <div className="h-px bg-ink-200" />
-                <div className="flex items-center justify-between">
-                  <dt className="font-semibold text-ink-900">
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="font-700 text-ink-900">
                     {creator.name} receives
                   </dt>
-                  <dd className="tabular font-bold text-positive-500">
-                    ₳{formatAda(fees.creatorReceives)}
+                  <dd className="tabular shrink-0 font-800 text-positive-500">
+                    <Ada />{formatAda(fees.creatorReceives)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-ink-500">Total from your wallet</dt>
+                  <dd className="tabular shrink-0 text-ink-700">
+                    <Ada />{formatAda(fees.totalPaid)}
                   </dd>
                 </div>
               </dl>
-
               <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-ink-400">
-                <ShieldCheck className="h-4 w-4" />
-                Non-custodial — funds never touch our wallet
-              </p>
-            </div>
-          </motion.div>
-
-          {/* ---------- Recent support ---------- */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            className="lg:sticky lg:top-28"
-          >
+                <ShieldCheck className="h-4 w-4" /> Non-custodial: funds never
+                touch our wallet{" "}
+              </p>{" "}
+            </div>{" "}
+          </div>{" "}
+          {/* ---------- Recent support ---------- */}{" "}
+          <div className="lg:sticky lg:top-28">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-bold text-ink-900">
+              <h3 className="font-display text-2xl uppercase text-ink-50">
                 Recent support
               </h3>
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-positive-500">
+              <span className="inline-flex items-center gap-1.5 text-xs font-800 uppercase tracking-[0.14em] text-ink-50">
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-positive-500 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-positive-500" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-500 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
                 </span>
                 Live
               </span>
@@ -242,29 +255,25 @@ export function SupportSection() {
                 <motion.div
                   key={support.id}
                   layout
-                  initial={{ opacity: 0, x: 16 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
                   className="panel flex items-start gap-3.5 p-4"
                 >
                   <span
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold text-white ${
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center  text-xs font-700 text-ink-50 ${
                       TINTS[i % TINTS.length]
                     }`}
                   >
                     {initialsFrom(support.supporter)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-ink-900">
+                    <p className="text-sm font-700 text-ink-900">
                       {support.supporter}
-                      <span className="font-medium text-ink-500">
+                      <span className="font-500 text-ink-500">
                         {support.recurring ? " joined " : " sent "}
                       </span>
-                      <span className="tabular text-brand-700">
-                        ₳{formatAdaSmart(support.amount)}
+                      <span className="tabular text-brand-500">
+                        <Ada />{formatAdaSmart(support.amount)}
                       </span>
-                      <span className="ml-2 text-xs font-medium text-ink-400">
+                      <span className="ml-2 text-xs font-500 text-ink-400">
                         {timeAgo(support.ts)}
                       </span>
                     </p>
@@ -279,7 +288,7 @@ export function SupportSection() {
             </div>
 
             {/* A plain list, not another card stacked beside the cards above */}
-            <ul className="mt-6 space-y-3 border-t border-ink-200 pt-6 text-sm">
+            <ul className="mt-6 space-y-3 border-t-3 border-ink-50 pt-6 text-sm text-ink-200">
               {[
                 "Payouts land instantly, not in 14 days",
                 "Supporters keep an on-chain receipt",
@@ -287,11 +296,11 @@ export function SupportSection() {
               ].map((line) => (
                 <li key={line} className="flex items-start gap-2.5">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-positive-500" />
-                  <span className="text-ink-500">{line}</span>
+                  <span className="text-ink-200">{line}</span>
                 </li>
               ))}
             </ul>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>
@@ -299,7 +308,7 @@ export function SupportSection() {
 }
 
 const TINTS = [
-  "bg-brand-700",
+  "bg-brand-500",
   "bg-brand-500",
   "bg-accent-600",
   "bg-ink-700",

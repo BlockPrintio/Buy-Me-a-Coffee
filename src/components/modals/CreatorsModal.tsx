@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { CREATORS } from "../../data/creators";
 import { SITE } from "../../config/site";
 import { formatAda } from "../../lib/utils";
+import { Ada } from "../ui/Ada";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -65,10 +66,10 @@ export function CreatorsModal() {
               type="button"
               onClick={() => setFilter(option.value)}
               aria-pressed={active}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={` px-3 py-2 text-sm font-700 transition-colors ${
                 active
-                  ? "bg-brand-700 text-white"
-                  : "border border-ink-300 text-ink-600 hover:border-brand-500 hover:text-brand-700"
+                  ? "bg-brand-500 text-ink-50"
+                  : "border border-ink-300 text-ink-600 hover:border-brand-500 hover:text-brand-500"
               }`}
             >
               {option.label}
@@ -91,18 +92,18 @@ export function CreatorsModal() {
                 className="flex flex-wrap items-start gap-4 py-5"
               >
                 <span
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white ${creator.tint}`}
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center  text-sm font-800 text-ink-50 ${creator.tint}`}
                 >
                   {creator.initials}
                 </span>
 
                 <div className="min-w-[12rem] flex-1">
-                  <p className="flex items-center gap-1.5 font-semibold text-ink-900">
+                  <p className="flex items-center gap-1.5 font-700 text-ink-900">
                     <span className="truncate">{creator.name}</span>
                     {creator.verified && (
                       <span
                         title="Verified creator"
-                        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-positive-500 text-white"
+                        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-positive-500 text-ink-50"
                       >
                         <Check className="h-2.5 w-2.5" strokeWidth={4} />
                       </span>
@@ -114,15 +115,17 @@ export function CreatorsModal() {
                   <p className="mt-1.5 text-sm leading-relaxed text-ink-500">
                     {creator.bio}
                   </p>
-                  <p className="tabular mt-2 text-xs font-semibold text-ink-400">
-                    ₳{formatAda(stats.earned, 0)} raised from{" "}
-                    {stats.supporters} supporters
+                  <p className="tabular mt-2 text-xs font-700 text-ink-400">
+                    <Ada />{formatAda(stats.earned, 0)} raised from {stats.supporters}{" "}
+                    supporters
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => openSupport({ creatorId: creator.id, amount: 5 })}
+                  onClick={() =>
+                    openSupport({ creatorId: creator.id, amount: 5 })
+                  }
                   className="btn-secondary btn-sm shrink-0"
                 >
                   <Coffee className="h-4 w-4" />

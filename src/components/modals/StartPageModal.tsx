@@ -19,7 +19,6 @@ const CATEGORIES = [
   { value: "educator", label: "Educator" },
   { value: "other", label: "Something else" },
 ] as const;
-
 type Step = "wallet" | "form" | "done";
 
 export function StartPageModal() {
@@ -58,7 +57,8 @@ export function StartPageModal() {
     event.preventDefault();
 
     const next: Record<string, string> = {};
-    if (handle.length < 3) next.handle = "Pick a handle of at least 3 characters.";
+    if (handle.length < 3)
+      next.handle = "Pick a handle of at least 3 characters.";
     if (displayName.trim().length < 2) next.displayName = "Add a display name.";
     if (!isConnected) next.wallet = "Connect a wallet to receive support.";
     setErrors(next);
@@ -78,7 +78,8 @@ export function StartPageModal() {
       walletAddress,
       avatar: initialsFrom(displayName),
       coverImage: "",
-      category: category as "developer" | "artist" | "spo" | "educator" | "other",
+      category: category as
+        "developer" | "artist" | "spo" | "educator" | "other",
     });
 
     savePage({
@@ -103,7 +104,6 @@ export function StartPageModal() {
     if (ok) window.setTimeout(() => setCopied(false), 2000);
     else toast({ tone: "error", title: "Could not copy the link" });
   };
-
   return (
     <Modal
       open={open}
@@ -115,7 +115,8 @@ export function StartPageModal() {
           : "Two minutes, no KYC, no approval queue. Your wallet is your account."
       }
     >
-      {/* --------------------------------------------------- connect first */}
+      {" "}
+      {/* --------------------------------------------------- connect first */}{" "}
       {step === "wallet" && (
         <div>
           <p className="mb-5 text-sm leading-relaxed text-ink-500">
@@ -125,7 +126,6 @@ export function StartPageModal() {
           <WalletPicker onConnected={() => setStep("form")} />
         </div>
       )}
-
       {/* ---------------------------------------------------------- form */}
       {step === "form" && (
         <form onSubmit={handleSubmit} noValidate>
@@ -133,14 +133,14 @@ export function StartPageModal() {
             <button
               type="button"
               onClick={() => setStep("wallet")}
-              className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 transition-colors hover:text-ink-900"
+              className="mb-4 inline-flex items-center gap-1.5 text-sm font-700 text-ink-500 transition-colors hover:text-ink-900"
             >
               <ArrowLeft className="h-4 w-4" />
               Wallet
             </button>
           )}
 
-          <div className="mb-5 flex items-center gap-3 rounded-xl bg-positive-50 p-3.5 text-sm text-positive-700">
+          <div className="mb-5 flex items-center gap-3  bg-positive-50 p-3.5 text-sm text-positive-700">
             <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
             <span className="min-w-0 truncate">
               Payouts go to {truncateMiddle(wallet.address ?? "", 10, 8)}
@@ -154,7 +154,7 @@ export function StartPageModal() {
               error={errors.handle}
               hint={`Your page will live at ${pageUrl}`}
             >
-              <div className="flex items-stretch overflow-hidden rounded-xl border border-ink-300 focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/10">
+              <div className="flex items-stretch overflow-hidden  border border-ink-300 focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/10">
                 <span className="flex items-center whitespace-nowrap bg-ink-50 px-3 text-sm text-ink-500">
                   {SITE.domain}/
                 </span>
@@ -166,7 +166,7 @@ export function StartPageModal() {
                   }
                   placeholder="yourname"
                   autoComplete="off"
-                  className="min-w-0 flex-1 bg-white px-3 py-3 text-ink-900 outline-none placeholder:text-ink-400"
+                  className="min-w-0 flex-1 bg-ink-50 px-3 py-3 text-ink-900 outline-none placeholder:text-ink-400"
                 />
               </div>
             </Field>
@@ -197,10 +197,10 @@ export function StartPageModal() {
                       type="button"
                       onClick={() => setCategory(option.value)}
                       aria-pressed={active}
-                      className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                      className={` px-4 py-2.5 text-sm font-700 transition-all duration-200 ${
                         active
-                          ? "bg-brand-700 text-white"
-                          : "border border-ink-300 text-ink-700 hover:border-brand-500 hover:text-brand-700"
+                          ? "bg-brand-500 text-ink-50"
+                          : "border border-ink-300 text-ink-700 hover:border-brand-500 hover:text-brand-500"
                       }`}
                     >
                       {option.label}
@@ -227,23 +227,22 @@ export function StartPageModal() {
           </div>
 
           <button type="submit" className="btn-primary mt-6 w-full">
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="h-4 w-4" />{" "}
             {page ? "Save changes" : "Create my page"}
           </button>
           <p className="mt-3 text-center text-xs text-ink-400">
-            Free forever. No card, no monthly fee — we only take 2.5% of what
-            you receive.
+            Free forever. No card, no monthly fee. We only take 2.5% of what you
+            receive.
           </p>
         </form>
       )}
-
       {/* ---------------------------------------------------------- done */}
       {step === "done" && (
         <div className="text-center">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-700 text-lg font-bold text-white">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center  bg-brand-500 text-lg font-800 text-ink-50">
             {initialsFrom(displayName || handle)}
           </span>
-          <h3 className="mt-5 font-display text-xl font-bold text-ink-900">
+          <h3 className="mt-5 font-display text-xl font-800 text-ink-900">
             {displayName}
           </h3>
           {bio && (
@@ -252,7 +251,7 @@ export function StartPageModal() {
             </p>
           )}
 
-          <div className="mt-6 flex items-center gap-2 rounded-2xl bg-ink-50 p-3">
+          <div className="mt-6 flex items-center gap-2  bg-ink-50 p-3">
             <code className="min-w-0 flex-1 truncate px-1 text-left text-sm text-ink-700">
               {pageUrl}
             </code>
@@ -265,12 +264,12 @@ export function StartPageModal() {
                 <Check className="h-4 w-4 text-positive-500" />
               ) : (
                 <Copy className="h-4 w-4" />
-              )}
+              )}{" "}
               {copied ? "Copied" : "Copy link"}
             </button>
           </div>
 
-          <p className="mt-4 flex items-start gap-2 rounded-xl bg-accent-50 p-3 text-left text-sm leading-relaxed text-accent-700">
+          <p className="mt-4 flex items-start gap-2  bg-accent-50 p-3 text-left text-sm leading-relaxed text-accent-700">
             <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               Saved to this browser. Hosting the page at that URL needs the
@@ -315,7 +314,7 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="text-sm font-bold text-ink-900">
+      <label htmlFor={id} className="text-sm font-800 text-ink-900">
         {label}
       </label>
       <div className="mt-2">{children}</div>
