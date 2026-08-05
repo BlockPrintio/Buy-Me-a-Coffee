@@ -90,14 +90,20 @@ export class CardanoWalletService {
   }
 
   /**
-   * Get connected wallet address
+   * Get connected wallet address.
+   * A wallet that has never transacted has no used addresses, so fall back to
+   * the change address before giving up — otherwise a fresh wallet looks like
+   * a failed connection.
    */
   async getAddress(): Promise<string | null> {
     if (!this.wallet) return null;
 
     try {
       const addresses = await this.wallet.getUsedAddresses();
-      return addresses && addresses.length > 0 ? addresses[0] : null;
+      if (addresses && addresses.length > 0) return addresses[0];
+
+      const changeAddress = await this.wallet.getChangeAddress();
+      return changeAddress || null;
     } catch (error) {
       console.error('Error getting address:', error);
       return null;
@@ -180,6 +186,9 @@ declare global {
       [key in WalletName]?: {
         enable: () => Promise<WalletAPI>;
         isEnabled: () => Promise<boolean>;
+        /** CIP-30 wallets expose their own display name and icon (a data URI). */
+        name?: string;
+        icon?: string;
       };
     };
   }

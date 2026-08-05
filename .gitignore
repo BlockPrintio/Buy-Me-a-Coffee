@@ -54,6 +54,13 @@ coverage/
 ehthumbs.db
 desktop.ini
 
+# AI coding-agent harness config (generated locally by tooling)
+.claude/settings.local.json
+.agents/
+.codex/
+.cursor/
+.gemini/
+
 # Misc
 *.pem
 *.key

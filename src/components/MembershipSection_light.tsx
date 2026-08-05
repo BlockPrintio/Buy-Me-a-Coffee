@@ -1,121 +1,145 @@
-import React from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+import { useApp } from "../context/AppContext";
+import { DEFAULT_CREATOR_ID } from "../data/creators";
+
+const TIERS = [
+  {
+    name: "Basic",
+    price: 5,
+    description: "For fans who want to chip in each month.",
+    benefits: ["Monthly support", "Email alerts", "Exclusive posts"],
+    popular: false,
+  },
+  {
+    name: "Creator",
+    price: 15,
+    description: "The sweet spot — most members land here.",
+    benefits: [
+      "Everything in Basic",
+      "Priority replies",
+      "Member-only Discord",
+      "Early access to drops",
+    ],
+    popular: true,
+  },
+  {
+    name: "Premium",
+    price: 25,
+    description: "For your most dedicated supporters.",
+    benefits: [
+      "Everything in Creator",
+      "Personal shoutout",
+      "Monthly podcast slot",
+      "1:1 feedback session",
+    ],
+    popular: false,
+  },
+];
 
 export function MembershipSection() {
-  const tiers = [
-    {
-      name: "Basic",
-      price: 5,
-      description: "Perfect for getting started",
-      benefits: [
-        "Support on a monthly basis",
-        "Email alerts",
-        "Exclusive content",
-      ],
-      popular: false,
-    },
-    {
-      name: "Creator",
-      price: 15,
-      description: "Most popular option",
-      benefits: [
-        "Everything in Basic",
-        "Priority support",
-        "Member-only Discord",
-        "Early access to features",
-      ],
-      popular: true,
-    },
-    {
-      name: "Premium",
-      price: 25,
-      description: "For dedicated supporters",
-      benefits: [
-        "Everything in Creator",
-        "Personal shoutout",
-        "Monthly podcast slot",
-        "1:1 feedback session",
-      ],
-      popular: false,
-    },
-  ];
+  const { openSupport } = useApp();
 
   return (
-    <section className="py-16 sm:py-20 bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="membership" className="section bg-white">
+      <div className="container-page">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12 sm:mb-16"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6 }}
+          className="max-w-2xl"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Start a membership for your biggest fans
+          <h2 className="heading-lg">
+            Recurring income from your biggest fans
           </h2>
-          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-            Earn recurring income by accepting monthly or yearly subscriptions
-            with exclusive perks.
+          <p className="lead mt-4">
+            Set your own tiers and perks. Members renew on-chain each month —
+            you keep the relationship and the revenue.
           </p>
         </motion.div>
 
-        {/* Membership Tiers */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          {tiers.map((tier, i) => (
+        <div className="mt-14 grid items-start gap-6 md:grid-cols-3 lg:gap-7">
+          {TIERS.map((tier, i) => (
             <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
+              key={tier.name}
+              initial={{ opacity: 0, y: 26 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className={`relative p-6 sm:p-8 rounded-2xl transition-all ${
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.55, delay: i * 0.1 }}
+              className={
                 tier.popular
-                  ? "bg-white border-2 border-blue-600 shadow-lg md:scale-105"
-                  : "bg-white border border-gray-200 hover:shadow-md"
-              }`}
+                  ? "relative rounded-3xl bg-brand-700 p-[2px] md:-mt-4"
+                  : "relative"
+              }
             >
               {tier.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-1 rounded-full text-sm font-bold">
-                    Most Popular
-                  </span>
-                </div>
+                <span className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand-700 px-3.5 py-1.5 text-xs font-semibold text-white">
+                  Most popular
+                </span>
               )}
 
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                {tier.name}
-              </h3>
-              <p className="text-gray-600 text-sm mb-4">{tier.description}</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-gray-900">
-                  ${tier.price}
-                </span>
-                <span className="text-gray-600 ml-2">/month</span>
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`w-full py-3 rounded-lg font-bold mb-8 transition-all ${
-                  tier.popular
-                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg"
-                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+              <div
+                className={`flex h-full flex-col rounded-3xl bg-white p-7 sm:p-8 ${
+                  tier.popular ? "" : "border border-ink-200"
                 }`}
               >
-                Join
-              </motion.button>
+                <h3 className="font-display text-lg font-bold text-ink-900">
+                  {tier.name}
+                </h3>
+                {/* min-height keeps the price row aligned when a description wraps */}
+                <p className="mt-1.5 min-h-[2.75rem] text-sm text-ink-500">
+                  {tier.description}
+                </p>
 
-              <div className="space-y-3">
-                {tier.benefits.map((benefit, j) => (
-                  <div key={j} className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">{benefit}</span>
-                  </div>
-                ))}
+                <div className="mt-6 flex items-baseline gap-1.5">
+                  <span className="tabular font-display text-5xl font-bold tracking-tight text-ink-900">
+                    ₳{tier.price}
+                  </span>
+                  <span className="text-sm font-medium text-ink-500">
+                    / month
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    openSupport({
+                      creatorId: DEFAULT_CREATOR_ID,
+                      amount: tier.price,
+                      recurring: true,
+                      tierName: tier.name,
+                    })
+                  }
+                  aria-haspopup="dialog"
+                  className={`mt-7 w-full ${
+                    tier.popular ? "btn-primary" : "btn-secondary"
+                  }`}
+                >
+                  Join {tier.name}
+                </button>
+
+                <div className="my-7 divider-fade" />
+
+                <ul className="space-y-3.5">
+                  {tier.benefits.map((benefit) => (
+                    <li key={benefit} className="flex items-start gap-3">
+                      <Check
+                        className="mt-0.5 h-4 w-4 shrink-0 text-positive-500"
+                        strokeWidth={2.5}
+                      />
+                      <span className="text-sm text-ink-500">{benefit}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </motion.div>
           ))}
         </div>
+
+        <p className="mt-10 text-center text-sm text-ink-500">
+          Cancel anytime · No lock-in · Members pay in ADA, you get paid in ADA
+        </p>
       </div>
     </section>
   );

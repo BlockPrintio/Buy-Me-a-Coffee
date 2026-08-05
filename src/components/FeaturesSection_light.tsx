@@ -1,83 +1,94 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Zap, Wallet, Shield, Users, Bell, TrendingUp } from "lucide-react";
+import { Bell, Shield, TrendingUp, Users, Wallet, Zap } from "lucide-react";
+
+const FEATURES = [
+  {
+    icon: Zap,
+    title: "Instant payouts",
+    description:
+      "Support settles to your wallet in seconds — no payout schedule, no holds, no minimum threshold before you can touch your own money.",
+  },
+  {
+    icon: Wallet,
+    title: "Any CIP-30 wallet",
+    description:
+      "Nami, Eternl, Lace, Yoroi and Typhon all connect in a single click, and you keep your keys throughout.",
+  },
+  {
+    icon: Shield,
+    title: "On-chain receipts",
+    description:
+      "Supporters can mint an NFT receipt — permanent, verifiable proof that they backed you early.",
+  },
+  {
+    icon: Users,
+    title: "Community tiers",
+    description:
+      "Build membership levels with real perks and turn one-off tips into income you can plan around.",
+  },
+  {
+    icon: Bell,
+    title: "Real-time alerts",
+    description:
+      "Get notified the moment someone supports you, with their message attached.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Analytics that matter",
+    description:
+      "Earnings, top supporters and growth trends, without leaving your dashboard.",
+  },
+];
 
 export function FeaturesSection() {
-  const features = [
-    {
-      icon: Zap,
-      title: "Instant Payouts",
-      description: "Get paid instantly to your Cardano wallet",
-    },
-    {
-      icon: Wallet,
-      title: "Multi-Wallet Support",
-      description: "Connect Nami, Eternl, Lace, and more",
-    },
-    {
-      icon: Shield,
-      title: "On-Chain Receipts",
-      description: "Supporters get NFT proof of support",
-    },
-    {
-      icon: Users,
-      title: "Community Tiers",
-      description: "Create membership levels for recurring income",
-    },
-    {
-      icon: Bell,
-      title: "Instant Notifications",
-      description: "Never miss a new supporter or message",
-    },
-    {
-      icon: TrendingUp,
-      title: "Analytics Dashboard",
-      description: "Track your earnings and growth",
-    },
-  ];
-
   return (
-    <section className="py-16 sm:py-20 bg-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" className="section bg-ink-50">
+      <div className="container-page">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12 sm:mb-16"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6 }}
+          className="max-w-2xl"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Designed for creators,
-            <span className="block">not for businesses</span>
-          </h2>
-          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-            Everything you need to fund your creative work on the Cardano
-            blockchain.
+          <h2 className="heading-lg">Built for creators, not for businesses</h2>
+          <p className="lead mt-4">
+            Everything you need to fund creative work on Cardano — and nothing
+            you don't.
           </p>
         </motion.div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {features.map((feature, i) => {
-            const Icon = feature.icon;
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="p-6 sm:p-8 bg-gray-50 border border-gray-200 rounded-xl hover:shadow-md transition-all"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mb-4">
-                  <Icon className="w-6 h-6 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </motion.div>
-            );
-          })}
+        {/* A divided list, not a rack of identical cards */}
+        <div className="mt-14 border-t border-ink-200">
+          <div className="grid md:grid-cols-2 md:gap-x-14">
+            {FEATURES.map((feature, i) => {
+              const Icon = feature.icon;
+              return (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.5, delay: (i % 2) * 0.08 }}
+                  className="flex gap-5 border-b border-ink-200 py-8"
+                >
+                  <Icon
+                    className="mt-0.5 h-6 w-6 shrink-0 text-brand-700"
+                    strokeWidth={1.8}
+                  />
+                  <div>
+                    <h3 className="font-display text-lg font-bold text-ink-900">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 leading-relaxed text-ink-500">
+                      {feature.description}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

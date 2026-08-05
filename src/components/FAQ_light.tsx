@@ -1,106 +1,122 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Plus } from "lucide-react";
+
+const FAQS = [
+  {
+    question: "What wallet do I need?",
+    answer:
+      "Any CIP-30 compatible wallet works — Nami, Eternl, Lace, Yoroi or Typhon. Connecting takes one click and you never hand over your keys.",
+  },
+  {
+    question: "How much does it cost?",
+    answer:
+      "A 2.5% platform fee plus the Cardano network fee of roughly 0.17 ADA. Supporters always see the full breakdown before they confirm, so there are no surprises.",
+  },
+  {
+    question: "Is my data safe on the blockchain?",
+    answer:
+      "Every transaction settles directly on Cardano with no intermediary holding funds. We store no sensitive data — the whole flow is non-custodial by design.",
+  },
+  {
+    question: "Can supporters get NFT receipts?",
+    answer:
+      "Yes. Supporters can mint an NFT receipt as permanent, verifiable proof of their support — a nice collectible and a nice record for you both.",
+  },
+  {
+    question: "Do I need a business account?",
+    answer:
+      "No. Support Ada is built for creators, not companies. Connect a wallet and your page is live. No KYC, no paperwork, no approval queue.",
+  },
+  {
+    question: "Is this available worldwide?",
+    answer:
+      "Anywhere ADA works, Support Ada works. Because it runs on Cardano, supporters can back you from any country without a bank in the middle.",
+  },
+];
 
 export function FAQ() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-
-  const faqs = [
-    {
-      question: "What wallet do I need?",
-      answer:
-        "You can use any CIP-30 compatible wallet including Nami, Eternl, Lace, Yoroi, or Typhon. The connection process takes just one click!",
-    },
-    {
-      question: "How much does it cost?",
-      answer:
-        "Support Ada charges a 2.5% platform fee plus the network fee of 0.17 ADA. Your supporters see the full amount they're sending, so there are no hidden fees.",
-    },
-    {
-      question: "Is my data safe on the blockchain?",
-      answer:
-        "Yes! All transactions happen on the Cardano blockchain with no intermediary holding your funds. We never store sensitive data - everything is non-custodial.",
-    },
-    {
-      question: "Can I receive NFT receipts?",
-      answer:
-        "Yes! Premium supporters can mint an NFT receipt proving their support. This creates a permanent on-chain record.",
-    },
-    {
-      question: "Do I need to set up a business account?",
-      answer:
-        "No! Support Ada is designed for creators, not businesses. Just connect your wallet and you're ready to go. No KYC required.",
-    },
-    {
-      question: "Is this available worldwide?",
-      answer:
-        "Yes! Since it's built on Cardano, anyone with a wallet can support creators from anywhere in the world.",
-    },
-  ];
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section className="py-16 sm:py-20 bg-white">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12 sm:mb-16"
-        >
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 flex-shrink-0" />
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">
-              Frequently asked questions
-            </h2>
-          </div>
-          <p className="text-base sm:text-lg text-gray-600">
-            Everything you need to know about Support Ada.
-          </p>
-        </motion.div>
-
-        {/* FAQ Items */}
-        <div className="space-y-4">
-          {faqs.map((faq, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-sm transition-all"
+    <section id="faq" className="section bg-ink-50">
+      <div className="container-page">
+        <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6 }}
+            className="text-center lg:sticky lg:top-28 lg:self-start lg:text-left"
+          >
+            <h2 className="heading-lg">Questions, answered</h2>
+            <p className="lead mt-4">
+              Everything worth knowing before you spin up your page.
+            </p>
+            <a
+              href="#top"
+              className="mt-6 inline-flex items-center gap-1.5 text-sm font-bold text-brand-700 transition-colors hover:text-brand-800"
             >
-              <button
-                onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                className="w-full px-4 sm:px-6 py-4 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between gap-3"
-              >
-                <span className="text-base sm:text-lg font-bold text-gray-900 text-left">
-                  {faq.question}
-                </span>
-                <motion.div
-                  animate={{ rotate: openIndex === i ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                </motion.div>
-              </button>
+              Still stuck? Talk to us →
+            </a>
+          </motion.div>
 
-              <AnimatePresence>
-                {openIndex === i && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="border-t border-gray-200 bg-gray-50"
+          <div className="space-y-3">
+            {FAQS.map((faq, i) => {
+              const isOpen = openIndex === i;
+              return (
+                <motion.div
+                  key={faq.question}
+                  initial={{ opacity: 0, y: 14 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.45, delay: i * 0.05 }}
+                  className={`overflow-hidden rounded-2xl border bg-white transition-colors duration-300 ease-out-expo ${
+                    isOpen ? "border-brand-500" : "border-ink-200 hover:border-ink-300"
+                  }`}
+                >
+                  <button
+                    onClick={() => setOpenIndex(isOpen ? null : i)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left sm:px-6"
                   >
-                    <p className="px-4 sm:px-6 py-4 text-gray-600 text-sm sm:text-base">
-                      {faq.answer}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ))}
+                    <span
+                      className={`font-display text-base font-bold transition-colors sm:text-lg ${
+                        isOpen ? "text-brand-800" : "text-ink-900"
+                      }`}
+                    >
+                      {faq.question}
+                    </span>
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-300 ease-out-expo ${
+                        isOpen
+                          ? "rotate-45 bg-brand-700 text-white"
+                          : "bg-ink-100 text-ink-600"
+                      }`}
+                    >
+                      <Plus className="h-4 w-4" strokeWidth={2.5} />
+                    </span>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <p className="px-5 pb-5 text-[0.95rem] leading-relaxed text-ink-500 sm:px-6">
+                          {faq.answer}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

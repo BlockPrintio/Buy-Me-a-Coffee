@@ -1,89 +1,122 @@
-import React from "react";
 import { motion } from "framer-motion";
-import { Star } from "lucide-react";
+import { Coffee, Star } from "lucide-react";
+import { useApp } from "../context/AppContext";
+
+const TESTIMONIALS = [
+  {
+    creatorId: "luna-dev",
+    name: "Luna Dev",
+    role: "Plutus smart contract developer",
+    initials: "LD",
+    tint: "bg-brand-700",
+    message:
+      "Support Ada made it trivial to get direct funding from my community. No intermediaries, just on-chain transactions that land in seconds.",
+    metric: "₳4.2K earned",
+  },
+  {
+    creatorId: "pete-rivera",
+    name: "Pete Rivera",
+    role: "Smart contract auditor",
+    initials: "PR",
+    tint: "bg-brand-500",
+    message:
+      "The Cardano integration is seamless. My supporters love that funds go straight to my wallet with zero custody risk on anyone's part.",
+    metric: "318 supporters",
+  },
+  {
+    creatorId: "sarah-johnson",
+    name: "Sarah Johnson",
+    role: "NFT artist",
+    initials: "SJ",
+    tint: "bg-accent-600",
+    message:
+      "Membership tiers plus NFT receipts turned casual followers into a real community. It feels like my own platform, not someone else's.",
+    metric: "92 members",
+  },
+];
 
 export function Testimonials() {
-  const testimonials = [
-    {
-      name: "Luna Dev",
-      role: "Plutus Smart Contract Developer",
-      avatar: "🎯",
-      message:
-        "Support Ada made it so easy to get direct funding from my community. No intermediaries, just pure on-chain transactions!",
-      stars: 5,
-    },
-    {
-      name: "Pete Rivera",
-      role: "Smart Contract Auditor",
-      avatar: "⚙️",
-      message:
-        "The Cardano integration is seamless. My supporters love that their funds go directly to my wallet with zero custody risk.",
-      stars: 5,
-    },
-    {
-      name: "Sarah Johnson",
-      role: "NFT Artist",
-      avatar: "🎨",
-      message:
-        "I love how I can create different membership tiers and even mint NFT receipts. It's like having a personal Cardano platform.",
-      stars: 5,
-    },
-  ];
+  const { openSupport, openModal } = useApp();
 
   return (
-    <section className="py-16 sm:py-20 bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="reviews" className="section bg-white">
+      <div className="container-page">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12 sm:mb-16"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6 }}
+          className="max-w-2xl"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Loved by Cardano creators
-          </h2>
-          <p className="text-base sm:text-lg text-gray-600">
-            Real stories from real creators using Support Ada.
-          </p>
+          <h2 className="heading-lg">Loved by Cardano creators</h2>
+          <div className="mt-5 flex items-center gap-2.5">
+            <div className="flex gap-0.5">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className="h-4 w-4 fill-accent-400 text-accent-400"
+                />
+              ))}
+            </div>
+            <p className="text-sm font-medium text-ink-500">
+              4.9 average from 1,200+ creators
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => openModal({ kind: "creators" })}
+            aria-haspopup="dialog"
+            className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-brand-700 transition-colors hover:text-brand-800"
+          >
+            Browse every creator →
+          </button>
         </motion.div>
 
-        {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          {testimonials.map((testimonial, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
+        <div className="mt-14 grid gap-x-12 gap-y-10 border-t border-ink-200 pt-12 md:grid-cols-3">
+          {TESTIMONIALS.map((testimonial, i) => (
+            <motion.figure
+              key={testimonial.name}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8 hover:shadow-md transition-all"
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.55, delay: i * 0.1 }}
+              className="flex flex-col"
             >
-              {/* Stars */}
-              <div className="flex gap-1 mb-4">
-                {[...Array(testimonial.stars)].map((_, j) => (
-                  <Star
-                    key={j}
-                    className="w-5 h-5 fill-yellow-400 text-yellow-400"
-                  />
-                ))}
-              </div>
+              <blockquote className="flex-1 font-display text-lg leading-relaxed text-ink-800">
+                “{testimonial.message}”
+              </blockquote>
 
-              {/* Message */}
-              <p className="text-gray-700 mb-6 italic">
-                &quot;{testimonial.message}&quot;
-              </p>
-
-              {/* Author */}
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-2xl">
-                  {testimonial.avatar}
+              <figcaption className="mt-6 flex min-w-0 items-center gap-3">
+                <span
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ${testimonial.tint}`}
+                >
+                  {testimonial.initials}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-ink-900">
+                    {testimonial.name}
+                  </p>
+                  {/* Wraps rather than truncating — the metric must stay readable */}
+                  <p className="text-sm text-ink-500">
+                    {testimonial.role} · {testimonial.metric}
+                  </p>
                 </div>
-                <div>
-                  <p className="font-bold text-gray-900">{testimonial.name}</p>
-                  <p className="text-sm text-gray-600">{testimonial.role}</p>
-                </div>
-              </div>
-            </motion.div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    openSupport({
+                      creatorId: testimonial.creatorId,
+                      amount: 5,
+                    })
+                  }
+                  aria-label={`Support ${testimonial.name}`}
+                  aria-haspopup="dialog"
+                  className="shrink-0 rounded-lg border border-ink-300 p-2.5 text-ink-600 transition-colors hover:border-brand-500 hover:text-brand-700"
+                >
+                  <Coffee className="h-4 w-4" />
+                </button>
+              </figcaption>
+            </motion.figure>
           ))}
         </div>
       </div>
