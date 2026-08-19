@@ -27,8 +27,12 @@ import {
 
 import blueprint from "../contracts/plutus.json";
 import {
+  ACCEPTED_POLICIES,
   BLOCKFROST_URL,
   CHAIN,
+  STABLECOIN_READY,
+  STABLECOIN_UNIT,
+  feeDueToken,
   EXPECTED_NETWORK_ID,
   MIN_SUPPORT_ADA,
   MIN_SUPPORT_LOVELACE,
@@ -99,6 +103,8 @@ export function receiptPolicy(): MintingPolicy {
       toPlutusCredential(CHAIN.platformAddress),
       BigInt(CHAIN.feeBps),
       BigInt(CHAIN.minFeeLovelace),
+      BigInt(CHAIN.minFeeToken),
+      ACCEPTED_POLICIES,
     ]),
   };
 }
@@ -107,9 +113,33 @@ export function receiptPolicyId(): string {
   return mintingPolicyToId(receiptPolicy());
 }
 
-/** `Support { creator, amount }` — constructor 0 of the validator's `Action`. */
-function supportRedeemer(creatorAddress: string, lovelace: bigint): string {
-  return Data.to(new Constr(0, [toPlutusCredential(creatorAddress), lovelace]));
+/** What a support settles in. Mirrors the validator's `Unit`. */
+export type Settlement = "ada" | "stablecoin";
+
+/** `Unit`: constructor 0 is Ada, constructor 1 is Token { policy, name }. */
+function plutusUnit(settlement: Settlement): Constr<string> {
+  if (settlement === "ada") return new Constr(0, []);
+  if (!STABLECOIN_READY) {
+    throw new SupportTxError(
+      "Stablecoin settlement is not configured. Set VITE_STABLECOIN_POLICY and VITE_STABLECOIN_NAME.",
+    );
+  }
+  return new Constr(1, [CHAIN.stablecoin.policyId, CHAIN.stablecoin.assetNameHex]);
+}
+
+/** `Support { creator, amount, unit }` — constructor 0 of `Action`. */
+function supportRedeemer(
+  creatorAddress: string,
+  amount: bigint,
+  settlement: Settlement,
+): string {
+  return Data.to(
+    new Constr(0, [
+      toPlutusCredential(creatorAddress),
+      amount,
+      plutusUnit(settlement),
+    ]),
+  );
 }
 
 /** CIP-20: "at most 64 bytes when UTF-8 encoded", per message-string. */
@@ -251,6 +281,8 @@ export interface SendSupportInput {
   amountAda: number;
   message?: string;
   walletNetworkId: number | null;
+  /** Defaults to ada, so existing callers keep working unchanged. */
+  settlement?: Settlement;
 }
 
 export interface SendSupportResult {
@@ -267,6 +299,7 @@ export async function sendSupport({
   amountAda,
   message,
   walletNetworkId,
+  settlement = "ada",
 }: SendSupportInput): Promise<SendSupportResult> {
   requireOnChain(walletNetworkId);
 
@@ -274,17 +307,30 @@ export async function sendSupport({
     throw new SupportTxError("Enter a support amount greater than zero.");
   }
 
-  const amountLovelace = BigInt(Math.round(amountAda * 1_000_000));
+  const inAda = settlement === "ada";
+
+  // Amounts are always integers in the smallest unit: lovelace for ada, and
+  // the token's own decimals otherwise. USDC and USDM both use six, the same
+  // as ada, but reading it from config keeps that a fact rather than a
+  // coincidence we would silently depend on.
+  const scale = inAda ? 1_000_000 : 10 ** CHAIN.stablecoin.decimals;
+  const amount = BigInt(Math.round(amountAda * scale));
 
   // The creator's output has to clear the ledger's minimum-ada deposit like
   // any other. Rejecting it here beats letting the wallet raise a signing
   // prompt for a transaction that can never be built.
-  if (amountLovelace < BigInt(MIN_SUPPORT_LOVELACE)) {
+  //
+  // A stablecoin output carries its own ada deposit alongside the token, which
+  // the wallet supplies when balancing, so the floor applies to the ada path.
+  if (inAda && amount < BigInt(MIN_SUPPORT_LOVELACE)) {
     throw new SupportTxError(
       `Cardano will not create an output below its minimum-ada deposit, so ₳${MIN_SUPPORT_ADA} is the smallest support that can settle on-chain.`,
     );
   }
-  const feeLovelace = BigInt(feeDueLovelace(Number(amountLovelace)));
+
+  const fee = BigInt(
+    inAda ? feeDueLovelace(Number(amount)) : feeDueToken(Number(amount)),
+  );
 
   const policy = receiptPolicy();
   const policyId = mintingPolicyToId(policy);
@@ -292,17 +338,23 @@ export async function sendSupport({
 
   const lucid = await connectLucid(walletApi);
 
+  const payout = (quantity: bigint) =>
+    inAda ? { lovelace: quantity } : { [STABLECOIN_UNIT]: quantity };
+
   let tx = lucid
     .newTx()
-    .pay.ToAddress(creatorAddress, { lovelace: amountLovelace })
-    .mintAssets({ [unit]: 1n }, supportRedeemer(creatorAddress, amountLovelace))
+    .pay.ToAddress(creatorAddress, payout(amount))
+    .mintAssets(
+      { [unit]: 1n },
+      supportRedeemer(creatorAddress, amount, settlement),
+    )
     .attach.MintingPolicy(policy);
 
   // Only create the fee output when one is genuinely due; an output below the
   // min-UTxO deposit cannot exist, and the validator waives it for the same
   // reason.
-  if (feeLovelace > 0n) {
-    tx = tx.pay.ToAddress(CHAIN.platformAddress, { lovelace: feeLovelace });
+  if (fee > 0n) {
+    tx = tx.pay.ToAddress(CHAIN.platformAddress, payout(fee));
   }
 
   const lines = message ? messageMetadata(message) : [];
@@ -314,9 +366,9 @@ export async function sendSupport({
   // by a Dune query or by the Pilot's dashboard, with no private index.
   const record = buildTxRecord({
     action: "support",
-    amount: Number(amountLovelace),
-    unit: "lovelace",
-    fee: Number(feeLovelace),
+    amount: Number(amount),
+    unit: inAda ? "lovelace" : STABLECOIN_UNIT,
+    fee: Number(fee),
     creatorHandle,
   });
   for (const [label, value] of Object.entries(
@@ -329,7 +381,7 @@ export async function sendSupport({
     const completed = await tx.complete();
     const signed = await completed.sign.withWallet().complete();
     const txHash = await signed.submit();
-    return { txHash, feePaid: Number(feeLovelace), receiptUnit: unit };
+    return { txHash, feePaid: Number(fee), receiptUnit: unit };
   } catch (error) {
     throw new SupportTxError(explainTxFailure(error));
   }

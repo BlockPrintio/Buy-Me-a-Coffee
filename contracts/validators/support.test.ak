@@ -9,7 +9,7 @@
 use cardano/address.{Address, Credential, Script, VerificationKey}
 use cardano/assets
 use cardano/transaction.{NoDatum, Output, Transaction}
-use support.{Action, Burn, Support, fee_due, platform_fee}
+use support.{Action, Ada, Burn, Support, Token, Unit, fee_due, fee_floor, platform_fee}
 
 // ---------------------------------------------------------------- fixtures
 
@@ -32,6 +32,28 @@ const fee_bps: Int = 250
 
 /// Roughly the min-UTxO deposit — below this a fee output cannot exist.
 const min_fee: Int = 1_000_000
+
+/// A token fee output strands more ada than an ada one, so its floor is set
+/// separately. 1 USDC at six decimals.
+const min_fee_token: Int = 1_000_000
+
+/// The named stablecoin issuer this deployment settles in.
+const usdc_policy: ByteArray =
+  #"22222222222222222222222222222222222222222222222222222222"
+
+const usdc_name: ByteArray = #"55534443"
+
+/// A token nobody agreed to accept, minted by an attacker for free.
+const fake_policy: ByteArray =
+  #"66666666666666666666666666666666666666666666666666666666"
+
+fn accepted() -> List<ByteArray> {
+  [usdc_policy]
+}
+
+fn usdc() -> Unit {
+  Token { policy: usdc_policy, name: usdc_name }
+}
 
 /// A support large enough that the 2.5% cut clears min-UTxO: 100 ADA, fee 2.5.
 const large: Int = 100_000_000
@@ -62,6 +84,23 @@ fn pay(beneficiary: Credential, lovelace: Int) -> Output {
   }
 }
 
+/// An output carrying `quantity` of a token, plus the ada deposit the ledger
+/// would require to deliver it.
+fn pay_token(
+  beneficiary: Credential,
+  token_policy: ByteArray,
+  token_name: ByteArray,
+  quantity: Int,
+) -> Output {
+  Output {
+    address: Address { payment_credential: beneficiary, stake_credential: None },
+    value: assets.from_lovelace(1_400_000)
+      |> assets.add(token_policy, token_name, quantity),
+    datum: NoDatum,
+    reference_script: None,
+  }
+}
+
 /// A transaction paying out `outputs` and minting `quantity` receipts.
 fn tx(outputs: List<Output>, quantity: Int) -> Transaction {
   Transaction {
@@ -72,11 +111,24 @@ fn tx(outputs: List<Output>, quantity: Int) -> Transaction {
 }
 
 fn mint_with(redeemer: Action, self: Transaction) -> Bool {
-  support.receipt.mint(platform(), fee_bps, min_fee, redeemer, policy, self)
+  support.receipt.mint(
+    platform(),
+    fee_bps,
+    min_fee,
+    min_fee_token,
+    accepted(),
+    redeemer,
+    policy,
+    self,
+  )
 }
 
 fn support_for(lovelace: Int) -> Action {
-  Support { creator: creator(), amount: lovelace }
+  Support { creator: creator(), amount: lovelace, unit: Ada }
+}
+
+fn support_usdc(quantity: Int) -> Action {
+  Support { creator: creator(), amount: quantity, unit: usdc() }
 }
 
 // ------------------------------------------------------------------- fees
@@ -229,7 +281,7 @@ test understating_the_amount_only_ever_buys_a_smaller_receipt() {
   // paying the creator far more. That mints fine — but the receipt then
   // attests only to `small`, which is all the redeemer claimed. There is no
   // way to obtain a receipt for `large` without paying the fee on `large`.
-  let understated = Support { creator: creator(), amount: small }
+  let understated = Support { creator: creator(), amount: small, unit: Ada }
   and {
     mint_with(understated, tx([pay(creator(), large)], 1)),
     fee_due(small, fee_bps, min_fee) == 0,
@@ -246,7 +298,7 @@ test rejects_paying_the_creators_share_to_someone_else() fail {
 test rejects_self_support_by_the_platform() fail {
   // Otherwise the platform could mint receipts by paying itself.
   mint_with(
-    Support { creator: platform(), amount: large },
+    Support { creator: platform(), amount: large, unit: Ada },
     tx([pay(platform(), large + large_fee)], 1),
   )
 }
@@ -266,6 +318,8 @@ test rejects_a_predatory_fee_rate() fail {
     platform(),
     greedy,
     min_fee,
+    min_fee_token,
+    accepted(),
     support_for(large),
     policy,
     tx([pay(creator(), large), pay(platform(), large * greedy / 10_000)], 1),
@@ -307,7 +361,119 @@ test supports_a_creator_behind_a_script_address() {
   // Creators using a smart-contract wallet are first-class here.
   let script_creator = Script(creator_vkh)
   mint_with(
-    Support { creator: script_creator, amount: large },
+    Support { creator: script_creator, amount: large, unit: Ada },
     tx([pay(script_creator, large), pay(platform(), large_fee)], 1),
   )
+}
+
+// ------------------------------------------------- stablecoin settlement
+
+/// 100 USDC at six decimals. The 2.5% cut is 2.5 USDC, clear of the token floor.
+const large_usdc: Int = 100_000_000
+
+const large_usdc_fee: Int = 2_500_000
+
+/// 10 USDC. The cut is 0.25 USDC, under the floor, so it is waived.
+const small_usdc: Int = 10_000_000
+
+test settles_in_an_accepted_stablecoin() {
+  mint_with(
+    support_usdc(large_usdc),
+    tx(
+      [
+        pay_token(creator(), usdc_policy, usdc_name, large_usdc),
+        pay_token(platform(), usdc_policy, usdc_name, large_usdc_fee),
+      ],
+      1,
+    ),
+  )
+}
+
+test waives_a_small_stablecoin_fee() {
+  // Same rule as ada: below the floor the creator keeps all of it and the
+  // transaction needs no fee output at all.
+  mint_with(
+    support_usdc(small_usdc),
+    tx([pay_token(creator(), usdc_policy, usdc_name, small_usdc)], 1),
+  )
+}
+
+test rejects_a_token_from_an_unnamed_issuer() fail {
+  // The forgery this policy exists to stop: mint a worthless token for free,
+  // "support" a creator with a hundred of them, and claim a valid receipt.
+  let counterfeit = Token { policy: fake_policy, name: usdc_name }
+  mint_with(
+    Support { creator: creator(), amount: large_usdc, unit: counterfeit },
+    tx([pay_token(creator(), fake_policy, usdc_name, large_usdc)], 1),
+  )
+}
+
+test rejects_the_right_issuer_with_the_wrong_asset_name() fail {
+  // One issuer can mint many assets; only the named one is the stablecoin.
+  let wrong_name = Token { policy: usdc_policy, name: #"4e4f5045" }
+  mint_with(
+    Support { creator: creator(), amount: large_usdc, unit: wrong_name },
+    tx([pay_token(creator(), usdc_policy, usdc_name, large_usdc)], 1),
+  )
+}
+
+test rejects_paying_ada_when_the_support_was_declared_in_stablecoin() fail {
+  // Declaring 100 USDC and settling 100 ada is a hundredfold discount at the
+  // exchange rates these assets actually trade at.
+  mint_with(
+    support_usdc(large_usdc),
+    tx(
+      [pay(creator(), large_usdc), pay_token(platform(), usdc_policy, usdc_name, large_usdc_fee)],
+      1,
+    ),
+  )
+}
+
+test rejects_a_stablecoin_fee_settled_in_ada() fail {
+  // The fee is owed in the unit the support was denominated in.
+  mint_with(
+    support_usdc(large_usdc),
+    tx(
+      [pay_token(creator(), usdc_policy, usdc_name, large_usdc), pay(platform(), large_usdc_fee)],
+      1,
+    ),
+  )
+}
+
+test rejects_underpaying_the_stablecoin_fee() fail {
+  mint_with(
+    support_usdc(large_usdc),
+    tx(
+      [
+        pay_token(creator(), usdc_policy, usdc_name, large_usdc),
+        pay_token(platform(), usdc_policy, usdc_name, large_usdc_fee - 1),
+      ],
+      1,
+    ),
+  )
+}
+
+test rejects_overcharging_a_waived_stablecoin_tip() fail {
+  // A tip advertised as free cannot be charged anything, in any unit.
+  mint_with(
+    support_usdc(small_usdc),
+    tx(
+      [
+        pay_token(creator(), usdc_policy, usdc_name, small_usdc),
+        pay_token(platform(), usdc_policy, usdc_name, 1),
+      ],
+      1,
+    ),
+  )
+}
+
+test the_two_fee_floors_are_independent() {
+  // The ada floor cannot silently govern a token fee. Both are stated
+  // separately at build time precisely because a token output strands more ada.
+  and {
+    fee_floor(Ada, min_fee, min_fee_token) == min_fee,
+    fee_floor(usdc(), min_fee, min_fee_token) == min_fee_token,
+    fee_due(large_usdc, fee_bps, fee_floor(usdc(), min_fee, min_fee_token)) == large_usdc_fee,
+    fee_due(small_usdc, fee_bps, fee_floor(usdc(), min_fee, min_fee_token)) == 0,
+  }
 }

@@ -42,7 +42,62 @@ export const CHAIN = {
    * works either way.
    */
   pilotLabel: Number(env("VITE_PILOT_METADATA_LABEL") || 0) || undefined,
+
+  /**
+   * The stablecoin this deployment settles in, when a creator chooses to be
+   * paid in one.
+   *
+   * Both halves are needed: an issuer can mint many assets under one policy, so
+   * the asset name is what distinguishes the stablecoin from everything else
+   * that issuer has ever minted. The validator checks both.
+   */
+  stablecoin: {
+    policyId: env("VITE_STABLECOIN_POLICY"),
+    assetNameHex: env("VITE_STABLECOIN_NAME"),
+    /** USDC and USDM both use six. Only affects display, never the ledger. */
+    decimals: Number(env("VITE_STABLECOIN_DECIMALS") || 6),
+    label: env("VITE_STABLECOIN_LABEL") || "USDC",
+  },
+
+  /**
+   * The smallest stablecoin fee worth taking as its own output, in the token's
+   * smallest unit.
+   *
+   * Deliberately separate from the ada floor. An output carrying a token has to
+   * lock up more ada than a plain one, roughly 1.2 to 1.4 against 0.86, because
+   * min-UTxO scales with output size and a token adds a policy id, an asset
+   * name and a quantity. A token fee therefore has to be worth more than the
+   * ada it strands, and no on-chain code can work that out without a rate.
+   */
+  minFeeToken: Number(env("VITE_MIN_FEE_TOKEN") || 1_000_000),
 } as const;
+
+/** True when a creator can actually choose stablecoin settlement. */
+export const STABLECOIN_READY =
+  CHAIN.stablecoin.policyId !== "" && CHAIN.stablecoin.assetNameHex !== "";
+
+/**
+ * Issuers this deployment will settle in, as the validator's `accepted`
+ * parameter. Part of the policy id, so adding one is a redeployment, not a
+ * config change.
+ */
+export const ACCEPTED_POLICIES: string[] = STABLECOIN_READY
+  ? [CHAIN.stablecoin.policyId]
+  : [];
+
+/** The stablecoin unit as `policyId + assetNameHex`, which is how Lucid keys assets. */
+export const STABLECOIN_UNIT =
+  CHAIN.stablecoin.policyId + CHAIN.stablecoin.assetNameHex;
+
+/**
+ * The fee due on a stablecoin support, in the token's smallest unit.
+ * Mirrors `fee_due` in the validator against the token floor rather than the
+ * ada one, so the checkout and the chain agree here too.
+ */
+export function feeDueToken(amount: number): number {
+  const fee = Math.floor((amount * CHAIN.feeBps) / 10_000);
+  return fee >= CHAIN.minFeeToken ? fee : 0;
+}
 
 /**
  * The smallest support that can exist on-chain, in lovelace.

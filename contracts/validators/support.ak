@@ -17,7 +17,7 @@
 use aiken/collection/dict
 use aiken/collection/list
 use cardano/address.{Credential}
-use cardano/assets.{Lovelace, PolicyId}
+use cardano/assets.{AssetName, Lovelace, PolicyId}
 use cardano/transaction.{Output, Transaction}
 
 /// Basis points denominator. 10_000 bps = 100%.
@@ -28,11 +28,38 @@ pub const bps_denominator: Int = 10_000
 /// for a transaction that skims more than 10% off a supporter.
 pub const max_fee_bps: Int = 1_000
 
+/// What a support was denominated in.
+///
+/// A creator paid for work already done carries the currency risk on money
+/// they have earned, which is the single most common reason a creator will not
+/// take income in ada. Letting the same policy settle either way is what makes
+/// that choice theirs rather than ours.
+pub type Unit {
+  Ada
+  Token { policy: PolicyId, name: AssetName }
+}
+
 pub type Action {
-  /// Mint one receipt for a support payment of `amount` lovelace to `creator`.
-  Support { creator: Credential, amount: Lovelace }
+  /// Mint one receipt for a support payment of `amount` of `unit` to `creator`.
+  Support { creator: Credential, amount: Int, unit: Unit }
   /// Receipts are the supporter's own; they may always destroy them.
   Burn
+}
+
+/// Whether this policy will settle in a given unit.
+///
+/// Ada always. A token only if its policy is on the list applied at build time.
+///
+/// Without the list, a receipt would attest to nothing: anyone could mint a
+/// worthless token, "support" a creator with a million of it, satisfy every
+/// check in here and walk away holding a valid receipt. Restricting settlement
+/// to named issuers is what keeps a receipt evidence of value received rather
+/// than evidence of arithmetic.
+pub fn is_accepted(unit: Unit, accepted: List<PolicyId>) -> Bool {
+  when unit is {
+    Ada -> True
+    Token { policy, .. } -> list.has(accepted, policy)
+  }
 }
 
 /// Total lovelace paid to a given payment credential across all outputs.
@@ -44,13 +71,17 @@ pub type Action {
 /// change returning to the platform's own credential would count towards that
 /// total, so the platform cannot fund support from the wallet it collects fees
 /// into. Support from a separate wallet, which is the sane arrangement anyway.
-pub fn paid_to(outputs: List<Output>, beneficiary: Credential) -> Lovelace {
+pub fn paid_to(
+  outputs: List<Output>,
+  beneficiary: Credential,
+  unit: Unit,
+) -> Int {
   list.foldl(
     outputs,
     0,
-    fn(output: Output, total: Lovelace) {
+    fn(output: Output, total: Int) {
       if output.address.payment_credential == beneficiary {
-        total + assets.lovelace_of(output.value)
+        total + quantity_in(output, unit)
       } else {
         total
       }
@@ -58,9 +89,17 @@ pub fn paid_to(outputs: List<Output>, beneficiary: Credential) -> Lovelace {
   )
 }
 
+/// How much of `unit` a single output carries.
+fn quantity_in(output: Output, unit: Unit) -> Int {
+  when unit is {
+    Ada -> assets.lovelace_of(output.value)
+    Token { policy, name } -> assets.quantity_of(output.value, policy, name)
+  }
+}
+
 /// The platform's cut of a support amount, rounded down so that rounding
 /// error always favours the creator rather than the platform.
-pub fn platform_fee(amount: Lovelace, fee_bps: Int) -> Lovelace {
+pub fn platform_fee(amount: Int, fee_bps: Int) -> Int {
   amount * fee_bps / bps_denominator
 }
 
@@ -81,12 +120,32 @@ pub fn platform_fee(amount: Lovelace, fee_bps: Int) -> Lovelace {
 ///
 /// Both bounds are enforced at the call site: the platform is paid exactly this
 /// figure, so "free" genuinely means free.
-pub fn fee_due(amount: Lovelace, fee_bps: Int, min_fee: Lovelace) -> Lovelace {
+pub fn fee_due(amount: Int, fee_bps: Int, min_fee: Int) -> Int {
   let fee = platform_fee(amount, fee_bps)
   if fee >= min_fee {
     fee
   } else {
     0
+  }
+}
+
+/// The smallest fee worth taking as its own output, in the unit being settled.
+///
+/// The two are not interchangeable, which is the whole reason this function
+/// exists. A fee output in ada must clear the min-UTxO deposit of roughly 0.86
+/// ada. A fee output carrying a token must clear a *larger* deposit, because
+/// min-UTxO scales with the size of the output and a token adds a policy id, an
+/// asset name and a quantity to it. Around 1.2 to 1.4 ada gets locked up to
+/// deliver a stablecoin fee at all.
+///
+/// So a token fee has to be worth more than the ada it strands to be worth
+/// collecting, and the validator cannot know an exchange rate to work that out.
+/// The operator states the figure per unit at build time instead, and it is
+/// part of the policy id like every other term.
+pub fn fee_floor(unit: Unit, min_fee: Int, min_fee_token: Int) -> Int {
+  when unit is {
+    Ada -> min_fee
+    Token { .. } -> min_fee_token
   }
 }
 
@@ -111,18 +170,31 @@ pub fn burns_only(self: Transaction, policy_id: PolicyId) -> Bool {
   }
 }
 
-/// `platform` is the payment credential collecting the fee, `fee_bps` the
-/// advertised rate, and `min_fee` the smallest fee worth paying as its own
-/// output. All three are applied at build time, so a deployed policy id
-/// commits to one specific platform on one specific set of terms — changing
-/// any of them yields a different policy id, and receipts already minted stay
-/// verifiable under the terms they were minted with.
-validator receipt(platform: Credential, fee_bps: Int, min_fee: Lovelace) {
+/// Every term is applied at build time, so a deployed policy id commits to one
+/// platform on one set of terms: who collects the fee, the rate, the ada and
+/// token floors below which it is waived, and which token issuers may be
+/// settled in at all. Change any of them and you get a different policy id,
+/// which leaves receipts already minted verifiable under the terms they were
+/// minted with.
+///
+/// `accepted` in particular is a commitment worth reading twice: adding a
+/// stablecoin later is not a config change, it is a new policy id and a new
+/// deployment. That is deliberate. A policy whose accepted issuers could drift
+/// would make every receipt it ever minted retrospectively ambiguous.
+validator receipt(
+  platform: Credential,
+  fee_bps: Int,
+  min_fee: Lovelace,
+  min_fee_token: Int,
+  accepted: List<PolicyId>,
+) {
   mint(redeemer: Action, policy_id: PolicyId, self: Transaction) {
     when redeemer is {
-      Support { creator, amount } -> and {
+      Support { creator, amount, unit } -> and {
         // A receipt for nothing would be meaningless.
         amount > 0,
+        // Settle only in ada or a named issuer's token.
+        is_accepted(unit, accepted),
         // Refuse to operate under predatory terms, whatever the parameters say.
         fee_bps >= 0,
         fee_bps <= max_fee_bps,
@@ -131,7 +203,7 @@ validator receipt(platform: Credential, fee_bps: Int, min_fee: Lovelace) {
         creator != platform,
         // The creator receives the full advertised amount. More is always
         // welcome — generosity is not an attack.
-        paid_to(self.outputs, creator) >= amount,
+        paid_to(self.outputs, creator, unit) >= amount,
         // The platform receives exactly its cut: no less, and no more.
         //
         // The upper bound is what makes the waiver real. With only a lower
@@ -140,7 +212,11 @@ validator receipt(platform: Credential, fee_bps: Int, min_fee: Lovelace) {
         // of it and still walk away holding a valid receipt. Pinning the figure
         // is what lets the receipt attest to the split rather than merely to a
         // floor on it.
-        paid_to(self.outputs, platform) == fee_due(amount, fee_bps, min_fee),
+        paid_to(self.outputs, platform, unit) == fee_due(
+          amount,
+          fee_bps,
+          fee_floor(unit, min_fee, min_fee_token),
+        ),
         // Exactly one receipt leaves this transaction.
         mints_single_receipt(self, policy_id),
       }
