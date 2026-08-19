@@ -66,3 +66,5 @@ desktop.ini
 *.key
 .env.example
 dist-ssr/
+
+CATALYST.md

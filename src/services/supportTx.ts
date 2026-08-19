@@ -37,6 +37,7 @@ import {
 } from "../config/chain";
 import type { WalletAPI } from "./cardanoWallet";
 import { randomHex } from "../lib/utils";
+import { buildTxRecord, metadataFor } from "./txLabels";
 
 /** Raised for problems worth showing the supporter verbatim. */
 export class SupportTxError extends Error {
@@ -307,6 +308,21 @@ export async function sendSupport({
   const lines = message ? messageMetadata(message) : [];
   if (lines.length > 0) {
     tx = tx.attachMetadata(674, { msg: lines });
+  }
+
+  // A structured record so this transaction is countable from chain data alone,
+  // by a Dune query or by the Pilot's dashboard, with no private index.
+  const record = buildTxRecord({
+    action: "support",
+    amount: Number(amountLovelace),
+    unit: "lovelace",
+    fee: Number(feeLovelace),
+    creatorHandle,
+  });
+  for (const [label, value] of Object.entries(
+    metadataFor(record, CHAIN.pilotLabel),
+  )) {
+    tx = tx.attachMetadata(Number(label), value);
   }
 
   try {

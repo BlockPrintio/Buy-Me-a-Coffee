@@ -34,6 +34,14 @@ export const CHAIN = {
    * rule, so the chain agrees with the checkout screen.
    */
   minFeeLovelace: Number(env("VITE_MIN_FEE_LOVELACE") || 1_000_000),
+  /**
+   * The Catalyst Pilot issues selected projects a standard metadata label so
+   * their activity appears on the public dashboard and the Cardano
+   * leaderboard. Set it once accepted and every transaction carries it; leave
+   * it unset and transactions still carry our own app label, so a Dune query
+   * works either way.
+   */
+  pilotLabel: Number(env("VITE_PILOT_METADATA_LABEL") || 0) || undefined,
 } as const;
 
 /**

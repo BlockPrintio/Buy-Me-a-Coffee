@@ -26,6 +26,8 @@ import {
 
 import blueprint from "../contracts/plutus.json";
 import { SupportTxError, connectLucid, requireOnChain } from "./supportTx";
+import { buildTxRecord, metadataFor, type TxAction } from "./txLabels";
+import { CHAIN } from "../config/chain";
 import type { WalletAPI } from "./cardanoWallet";
 
 const VALIDATOR_TITLE = "membership.membership.spend";
@@ -115,6 +117,33 @@ function fromDatum(datum: string): SubscriptionTerms | null {
 const CLAIM = Data.to(new Constr(0, []));
 const CANCEL = Data.to(new Constr(1, []));
 
+
+/**
+ * Attach the same countable record membership transactions produce, so a
+ * dashboard sees starts, claims and cancellations as distinct events rather
+ * than as undifferentiated script traffic.
+ */
+type TxBuilder = ReturnType<LucidEvolution["newTx"]>;
+
+function withRecord(
+  tx: TxBuilder,
+  action: TxAction,
+  amount: bigint,
+): TxBuilder {
+  const record = buildTxRecord({
+    action,
+    amount: Number(amount),
+    unit: "lovelace",
+  });
+  let next = tx;
+  for (const [label, value] of Object.entries(
+    metadataFor(record, CHAIN.pilotLabel),
+  )) {
+    next = next.attachMetadata(Number(label), value);
+  }
+  return next;
+}
+
 export interface StartMembershipInput {
   walletApi: WalletAPI;
   creatorAddress: string;
@@ -160,14 +189,17 @@ export async function startMembership({
     nextClaimAt: BigInt(Date.now()),
   };
 
-  const tx = await lucid
-    .newTx()
-    .pay.ToContract(
-      membershipAddress(lucid),
-      { kind: "inline", value: toDatum(terms) },
-      { lovelace: locked },
-    )
-    .complete();
+  const tx = await withRecord(
+    lucid
+      .newTx()
+      .pay.ToContract(
+        membershipAddress(lucid),
+        { kind: "inline", value: toDatum(terms) },
+        { lovelace: locked },
+      ),
+    "membership_start",
+    locked,
+  ).complete();
 
   const signed = await tx.sign.withWallet().complete();
   return { txHash: await signed.submit(), locked };
